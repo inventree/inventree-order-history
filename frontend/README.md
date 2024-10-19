@@ -1,33 +1,50 @@
-# InvenTree Order History - Frontend Code
+# React + TypeScript + Vite
 
-This directory contains the frontend code for the InvenTree Order History plugin.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Development
+Currently, two official plugins are available:
 
-This project uses [Vite](https://vitejs.dev/) as the build tool. We followed [this guide](https://vitejs.dev/guide/#scaffolding-your-first-vite-project) to scaffold the project.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-### Building
+## Expanding the ESLint configuration
 
-*Note: Assumed you are already in the `frontend` directory.*
+If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
 
-To compile the frontend code, run:
+- Configure the top-level `parserOptions` property like this:
 
-```bash
-npm run build --emptyOutDir
+```js
+export default tseslint.config({
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-This will compile the frontend into the `../order_history/static` directory (ready for distribution).
+- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
+- Optionally add `...tseslint.configs.stylisticTypeChecked`
+- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
 
-Note: The target directory is intentionally outside of the frontend directory, so that the compiled files are correctly bundled into the python package install.
+```js
+// eslint.config.js
+import react from 'eslint-plugin-react'
 
-### Testing
-
-To test the frontend code, run:
-
-```bash
-npm run dev
+export default tseslint.config({
+  // Set the react version
+  settings: { react: { version: '18.3' } },
+  plugins: {
+    // Add the react plugin
+    react,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended rules
+    ...react.configs.recommended.rules,
+    ...react.configs['jsx-runtime'].rules,
+  },
+})
 ```
-
-This will start a development server (usually on `localhost:5173`) which will automatically reload when changes are made to the source code.
-
-The development server provides some "dummy" harness data to test the frontend code.
