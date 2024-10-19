@@ -1,7 +1,5 @@
 """Order history plugin for InvenTree."""
 
-import logging
-
 from plugin import InvenTreePlugin
 from plugin.mixins import SettingsMixin, UrlsMixin, UserInterfaceMixin
 
