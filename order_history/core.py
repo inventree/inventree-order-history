@@ -1,5 +1,6 @@
 """Order history plugin for InvenTree."""
 
+from part.models import Part
 from plugin import InvenTreePlugin
 from plugin.mixins import SettingsMixin, UrlsMixin, UserInterfaceMixin
 
@@ -50,8 +51,21 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
         """Return a list of UI panels to be rendered in the InvenTree user interface."""
 
         target = context.get('target_model')
+        pk = context.get('target_id')
 
+        if not target or not pk:
+            return []
+        
+        part = None
+
+        # Request must match a valid part
         if target == 'part':
+            try:
+                part = Part.objects.get(pk=pk)
+            except Part.DoesNotExist:
+                pass
+
+        if part:
             return [
                 {
                     'key': 'order-history',
