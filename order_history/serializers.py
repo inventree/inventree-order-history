@@ -34,7 +34,6 @@ class OrderHistoryRequestSerializer(serializers.Serializer):
     order_type = serializers.ChoiceField(
         label=_('Order Type'),
         choices=[('build', _('Build Order')), ('purchase', _('Purchase Order')), ('sales', _('Sales Order')), ('return', _('Return Order'))],
-        required=False,
         help_text=_('Filter order data by this type'),
     )
 
