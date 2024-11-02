@@ -157,13 +157,98 @@ class HistoryView(APIView):
     def generate_sales_order_history(self):
         """Generate sales order history data."""
 
-        return []
+        from order.models import SalesOrderLineItem
+        from order.status_codes import SalesOrderStatusGroups
+
+        # TODO: Filter by customer
+
+        lines = SalesOrderLineItem.objects.filter(
+            order__status__in=SalesOrderStatusGroups.COMPLETE,
+            shipped__gt=0
+        ).prefetch_related(
+            'part', 'order', 'allocations'
+        )
+
+        if self.part:
+            parts = self.part.get_descendants(include_self=True)
+            lines = lines.filter(part__in=parts)
+
+        # TODO: Account for order lines which have been shipped but not yet completed
+
+        # Filter by date range
+        lines = lines.exclude(order__shipment_date=None).filter(
+            order__shipment_date__gte=self.start_date,
+            order__shipment_date__lte=self.end_date
+        )
+
+        # Construct a dictionary of sales history data to part ID
+        history_items = {}
+        parts = {}
+
+        for line in lines:
+            part = line.part
+
+            # Extract the date key for the line item
+            part_history = history_items.get(part.pk, None) or {}
+
+            if part.pk not in parts:
+                parts[part.pk] = part
+
+            date_key = helpers.convert_date(line.order.shipment_date, self.period)
+            date_entry = part_history.get(date_key, 0)
+            date_entry += line.shipped
+
+            # Save data back into the dictionary
+            part_history[date_key] = date_entry
+            history_items[part.pk] = part_history
+
+        return self.format_response(parts, history_items)
     
     def generate_return_order_history(self):
         """Generate return order history data."""
 
-        return []
+        from order.models import ReturnOrderLineItem
+        from order.status_codes import ReturnOrderStatusGroups
 
+        lines = ReturnOrderLineItem.objects.filter(
+            order__status__in=ReturnOrderStatusGroups.COMPLETE,
+        ).prefetch_related(
+            'item', 'item__part', 'order'
+        )
+
+        if self.part:
+            parts = self.part.get_descendants(include_self=True)
+            lines = lines.filter(item__part__in=parts)
+        
+        # TODO: Account for return lines which have been completed but not yet received
+
+        # Filter by date range
+        lines = lines.exclude(order__complete_date=None).filter(
+            order__complete_date__gte=self.start_date,
+            order__complete_date__lte=self.end_date
+        )
+
+        history_items = {}
+        parts = {}
+
+        for line in lines:
+            part = line.item.part
+
+            # Extract the date key for the line item
+            part_history = history_items.get(part.pk, None) or {}
+
+            if part.pk not in parts:
+                parts[part.pk] = part
+
+            date_key = helpers.convert_date(line.order.complete_date, self.period)
+            date_entry = part_history.get(date_key, 0)
+            date_entry += line.item.quantity
+
+            # Save data back into the dictionary
+            part_history[date_key] = date_entry
+            history_items[part.pk] = part_history
+
+        return self.format_response(parts, history_items)
     def format_response(self, part_dict: dict, history_items: dict) -> Response:
         """Format the response data for the order history.
         
