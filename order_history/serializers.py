@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from part.models import Part
+from part.serializers import PartBriefSerializer
 
 
 class OrderHistoryRequestSerializer(serializers.Serializer):
@@ -48,3 +49,25 @@ class OrderHistoryRequestSerializer(serializers.Serializer):
     )
 
 
+class OrderHistoryItemSerializer(serializers.Serializer):
+    """Serializer for a single item in the OrderHistoryResponseSerializer."""
+
+    class Meta:
+        """Metaclass options for this serializer."""
+
+        fields = ['date', 'quantity']
+
+    date = serializers.DateField(read_only=True)
+    quantity = serializers.FloatField(read_only=True)
+
+
+class OrderHistoryResponseSerializer(serializers.Serializer):
+    """Serializer for returning history data from the OrderHistory plugin."""
+
+    class Meta:
+        """Metaclass options for this serializer."""
+
+        fields = ['part', 'history']
+
+    part = PartBriefSerializer(read_only=True, many=False)
+    history = OrderHistoryItemSerializer(many=True, read_only=True)
