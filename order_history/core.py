@@ -45,6 +45,11 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
             'default': True,
             'validator': bool,
         },
+        'USER_GROUP': {
+            'name': 'Allowed Group',
+            'description': 'The user group that is allowed to view order history',
+            'model': 'auth.group',
+        }
     }
 
     def setup_urls(self):
@@ -57,6 +62,61 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
             path('history/', HistoryView.as_view(), name='order-history'),
         ]
 
+    def is_panel_visible(self, target: str, pk: int) -> bool:
+        """Determines whether the order history panel should be visible."""
+
+        from part.models import Part
+        from company.models import Company
+
+        # Display for the 'build index' page
+        if target == 'manufacturing':
+            return self.plugin_settings.get('BUILD_ORDER_HISTORY')
+
+        # Display for the 'purchase order index' page
+        if target == 'purchasing':
+            return self.plugin_settings.get('PURCHASE_ORDER_HISTORY')
+
+        # Display for the 'sales' page
+        if target == 'sales':
+            return self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')
+
+        # Display for a particular company
+        if target == 'company':
+            try:
+                company = Company.objects.get(pk=pk)
+
+                if company.is_supplier and self.plugin_settings.get('PURCHASE_ORDER_HISTORY'):
+                    return True
+                
+                if company.is_customer and (self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
+                    return True
+                
+                return False
+
+            except Exception:
+                return False
+
+        # Display for a particular part
+        if target == 'part':
+            try:
+                part = Part.objects.get(pk=pk)
+
+                if part.assembly() and self.plugin_settings.get('BUILD_ORDER_HISTORY'):
+                    return True
+                
+                if part.purchaseable() and self.plugin_settings.get('PURCHASE_ORDER_HISTORY'):
+                    return True
+                
+                if part.is_salable() and (self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
+                    return True
+
+                return False
+
+            except Exception:
+                return False
+
+        # No other targets are supported
+        return False
 
     def get_ui_panels(self, request, context=None, **kwargs):
         """Return a list of UI panels to be rendered in the InvenTree user interface."""
@@ -65,36 +125,33 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
 
         if not user or not user.is_authenticated:
             return []
+        
+        # Cache the settings for this plugin
+        self.plugin_settings = self.get_settings_dict()
+
+        # Check that the user is part of the allowed group
+        if group := self.plugin_settings.get('USER_GROUP'):
+            if not user.groups.filter(pk=group).exists():
+                return []
 
         target = context.get('target_model')
         pk = context.get('target_id')
 
-        if not target or not pk:
+        # Panel should not be visible for this target!
+        if not self.is_panel_visible(target, pk):
             return []
-        
-        part = None
 
-        # Request must match a valid part
-        if target == 'part':
-            try:
-                part = Part.objects.get(pk=pk)
-            except Part.DoesNotExist:
-                pass
-
-        if part:
-            return [
-                {
-                    'key': 'order-history',
-                    'title': 'Order History',
-                    'description': 'View order history for this part',
-                    'icon': 'history',
-                    'source': self.plugin_static_file(
-                        'OrderHistoryPanel.js:renderPanel'
-                    ),
-                    'context': {
-                        'settings': self.get_settings_dict(),
-                    }
+        return [
+            {
+                'key': 'order-history',
+                'title': 'Order History',
+                'description': 'View order history for this part',
+                'icon': 'history',
+                'source': self.plugin_static_file(
+                    'OrderHistoryPanel.js:renderPanel'
+                ),
+                'context': {
+                    'settings': self.plugin_settings,
                 }
-            ]
-
-        return []
+            }
+        ]
