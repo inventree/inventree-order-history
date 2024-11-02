@@ -1,5 +1,5 @@
 import { BarChart, BarChartSeries } from '@mantine/charts';
-import { Alert, Card, Group, MantineProvider, Paper, Select, Stack, Text} from '@mantine/core';
+import { Alert, Card, Group, MantineProvider, Paper, Select, Text} from '@mantine/core';
 import { DateValue, MonthPickerInput } from '@mantine/dates';
 import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
@@ -26,15 +26,57 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     const [ historyData, setHistoryData ] = useState<any[]>([]);
 
+    // Determine which "types" of orders are valid for the current context
+    const validOrderTypes = useMemo(() => {
+
+        let types = [];
+
+        // Allow "all" types for now...
+        types = [
+            {
+                value: 'purchase',
+                label: 'Purchase Orders'
+            },
+            {
+                value: 'sales',
+                label: 'Sales Orders'
+            },
+            {
+                value: 'build',
+                label: 'Build Orders'
+            },
+            {
+                value: 'return',
+                label: 'Return Orders'
+            }
+        ];
+
+        return types;
+    }, []);
+
+    const [ orderType, setOrderType ] = useState<string | null>(null);
+
     useEffect(() => {
+        setOrderType('purchase');
+    }, []);
+
+    // Request order history data from the API
+    useEffect(() => {
+
+        // Order type must be provided
+        if (!orderType) {
+            setHistoryData([]);
+            return;
+        }
 
         context?.api?.get(ORDER_HISTORY_URL, {
             params: {
                 start_date: dayjs(startDate).format('YYYY-MM-DD'),
                 end_date: dayjs(endDate).format('YYYY-MM-DD'),
                 period: period,
-                part: context.instance?.pk, // TODO: Pass in part ID,
-                order_type: 'purchase', // TODO: Allow user to select order type
+                part: context.model == 'part' ? context.instance?.pk : undefined,
+                company: context.model == 'company' ? context.instance?.pk : undefined,
+                order_type: orderType,
             }
         }).then((response: any) => {
             setHistoryData(response.data);
@@ -43,7 +85,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             setHistoryData([]);
         });
 
-    }, [startDate, endDate, period]);
+    }, [startDate, endDate, period, orderType, context.model, context.instance]);
 
     // Return a chart series for each history entry
     const chartSeries: BarChartSeries[] = useMemo(() => {
@@ -91,21 +133,23 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     }, [historyData]);
 
-    useEffect(() => {
-        console.log("Chart Series");
-        console.log(chartSeries);
-
-        console.log("Chart Data");
-        console.log(chartData);
-    }
-    , [chartData, chartSeries]);
-
     const hasData = useMemo(() => chartData.length > 0 && chartSeries.length > 0, [chartData, chartSeries]);
 
     return (
         <>
-        <Paper withBorder>
+        <Paper withBorder p="sm" m="sm">
         <Group gap="xs">
+            <Select
+                data={validOrderTypes}
+                value={orderType}
+                disabled={validOrderTypes.length <= 1}
+                onChange={(value: string | null) => {
+                    if (value) {
+                        setOrderType(value);
+                    }
+                }}
+                label={`Order Type`}
+            />
             <MonthPickerInput
             value={startDate}
             label={`Start Date`}
@@ -140,7 +184,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             />
             </Group>
             </Paper>
-        <Stack gap="xs">
+        <Paper withBorder p="sm" m="sm">
             {hasData ? (
                 <Card>
                 <BarChart
@@ -156,7 +200,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                     <Text>No order history data found, based on the provided parameters</Text>
                 </Alert>
             )}
-        </Stack>
+        </Paper>
         </>
     );
 }
@@ -169,6 +213,8 @@ function OrderHistoryPanel({context}: {context: any}) {
  * @param context - The context object to pass to the panel
  */
 export function renderPanel(target: HTMLElement, context: any) {
+
+    console.log("renderPanel:", context);
 
     createRoot(target).render(
         <MantineProvider>
