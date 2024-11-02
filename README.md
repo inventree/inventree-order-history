@@ -1,3 +1,8 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI](https://img.shields.io/pypi/v/inventree-order-history)](https://pypi.org/project/inventree-order-history/)
+![PEP](https://github.com/inventree/inventree-order-history/actions/workflows/pep.yaml/badge.svg)
+
+
 # InvenTree Order History
 
 An [InvenTree](https://inventree.org) plugin for generating historical ordering data.
