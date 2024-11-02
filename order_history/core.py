@@ -1,5 +1,6 @@
 """Order history plugin for InvenTree."""
 
+from company.models import Company
 from part.models import Part
 from plugin import InvenTreePlugin
 from plugin.mixins import SettingsMixin, UrlsMixin, UserInterfaceMixin
@@ -64,9 +65,6 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
 
     def is_panel_visible(self, target: str, pk: int) -> bool:
         """Determines whether the order history panel should be visible."""
-
-        from part.models import Part
-        from company.models import Company, SupplierPart
 
         # Display for the 'build index' page
         if target == 'manufacturing':
