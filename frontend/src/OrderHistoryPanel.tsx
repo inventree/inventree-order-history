@@ -5,10 +5,25 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import dayjs from 'dayjs';
 
+type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
 const ORDER_HISTORY_URL = "plugin/order_history/history/";
 
-type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
+const COLOR_WHEEL = [
+    'blue.6',
+    'grape.6',
+    'orange.6',
+    'lime.6',
+    'green.6',
+    'cyan.6',
+    'yellow.6',
+    'violet.6',
+    'red.6',
+    'teal.6',
+    'pink.6',
+    'gray.6',
+    'indigo.6',
+];
 
 function OrderHistoryPanel({context}: {context: any}) {
 
@@ -179,8 +194,8 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     const [ orderType, setOrderType ] = useState<string | null>(null);
 
+    // Ensure that the selected order type is valid for the current context
     useEffect(() => {
-
         if (!validOrderTypes.find((type) => type.value == orderType)) {
             setOrderType(validOrderTypes[0]?.value ?? null);
         }
@@ -233,6 +248,7 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     }, [queryParams, context.api, orderType]);
 
+    // Callback to download the order history data in a specific format
     const downloadData = useCallback((fileFormat: string) => {
 
         let url = `${context.host}${ORDER_HISTORY_URL}?export=${fileFormat}`;
@@ -258,7 +274,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                 return {
                     name: partKey,
                     label: part?.full_name ?? part?.name ?? part,
-                    // color: 'blue.6',
+                    color: COLOR_WHEEL[index % COLOR_WHEEL.length],
                 };
             }) ?? []
         );
