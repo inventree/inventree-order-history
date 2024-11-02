@@ -12,6 +12,7 @@
   "dependencies": {
     "@mantine/charts": "^7.13.3",
     "@mantine/core": "^7.13.3",
+    "@mantine/dates": "^7.13.4",
     "@mantine/hooks": "^7.13.3",
     "dayjs": "^1.11.13",
     "react": "^18.3.1",
