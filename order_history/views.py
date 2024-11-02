@@ -171,8 +171,6 @@ class HistoryView(APIView):
         from order.models import SalesOrderLineItem
         from order.status_codes import SalesOrderStatusGroups
 
-        # TODO: Filter by customer
-
         lines = SalesOrderLineItem.objects.filter(
             order__status__in=SalesOrderStatusGroups.COMPLETE,
             shipped__gt=0
