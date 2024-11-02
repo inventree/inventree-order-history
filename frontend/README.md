@@ -2,7 +2,18 @@
 
 This directory contains the frontend code for the InvenTree Order History plugin.
 
-## Development
+## Architecture
+
+The frontend code is designed to integrate natively with the InvenTree user interface.
+
+### Frameworks
+
+We use Mantine, running on React, to match the InvenTree stack.
+
+- [React](https://react.dev/)
+- [Mantine](https://mantine.dev/)
+
+### Project Setup
 
 This project uses [Vite](https://vitejs.dev/) as the build tool. We followed [this guide](https://vitejs.dev/guide/#scaffolding-your-first-vite-project) to scaffold the project.
 
