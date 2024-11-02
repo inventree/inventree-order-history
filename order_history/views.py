@@ -103,7 +103,7 @@ class HistoryView(APIView):
 
             history_items[part.pk][date_key] += build.quantity
 
-        return self.format_response(parts, history_items)
+        return self.format_response(parts, history_items, 'build')
 
     def generate_purchase_order_history(self):
         """Generate purchase order history data."""
@@ -162,7 +162,7 @@ class HistoryView(APIView):
             part_history[date_key] = date_entry
             history_items[part.pk] = part_history
 
-        return self.format_response(parts, history_items)
+        return self.format_response(parts, history_items, 'purchase')
 
 
     def generate_sales_order_history(self):
@@ -218,7 +218,7 @@ class HistoryView(APIView):
             part_history[date_key] = date_entry
             history_items[part.pk] = part_history
 
-        return self.format_response(parts, history_items)
+        return self.format_response(parts, history_items, 'sales')
     
     def generate_return_order_history(self):
         """Generate return order history data."""
@@ -269,8 +269,9 @@ class HistoryView(APIView):
             part_history[date_key] = date_entry
             history_items[part.pk] = part_history
 
-        return self.format_response(parts, history_items)
-    def format_response(self, part_dict: dict, history_items: dict) -> Response:
+        return self.format_response(parts, history_items, 'return')
+    
+    def format_response(self, part_dict: dict, history_items: dict, order_type: str) -> Response:
         """Format the response data for the order history.
         
         Arguments:
@@ -280,7 +281,7 @@ class HistoryView(APIView):
 
         if self.export_format:
             # Export the data in the requested format
-            return self.export_data(part_dict, history_items)
+            return self.export_data(part_dict, history_items, order_type)
 
         response = []
 
@@ -307,7 +308,7 @@ class HistoryView(APIView):
             serializers.OrderHistoryResponseSerializer(response, many=True).data
         )
 
-    def export_data(self, part_dict: dict, history_items: dict):
+    def export_data(self, part_dict: dict, history_items: dict, order_type: str):
         """Export the data in the requested format."""
 
         # Construct the set of headers
@@ -327,4 +328,4 @@ class HistoryView(APIView):
 
         data = dataset.export(self.export_format)
 
-        return DownloadFile(data, filename=f'order_history.{self.export_format}')
+        return DownloadFile(data, filename=f'InvenTree_{order_type}_order_history.{self.export_format}')

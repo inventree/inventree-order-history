@@ -1,16 +1,18 @@
 import { BarChart, BarChartSeries } from '@mantine/charts';
-import { Alert, Card, Group, MantineProvider, Paper, Select, Text} from '@mantine/core';
+import { Alert, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
 import { DateValue, MonthPickerInput } from '@mantine/dates';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import dayjs from 'dayjs';
 
 
-const ORDER_HISTORY_URL = "/plugin/order_history/history/";
+const ORDER_HISTORY_URL = "plugin/order_history/history/";
 
 type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
 function OrderHistoryPanel({context}: {context: any}) {
+
+    const [ loading, setLoading ] = useState<boolean>(true);
 
     // Plugin settings object
     const pluginSettings = useMemo(() => context?.context?.settings ?? {}, [context]);
@@ -56,7 +58,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                 return false;
         }
 
-    }, [pluginSettings, context]);
+    }, [context.user, context.instance, pluginSettings]);
 
     // Determine if current context supports SalesOrders
     const supportsSalesOrders = useMemo(() => {
@@ -82,7 +84,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                 return false;
         }
 
-    }, [context]);
+    }, [context.user, context.instance, pluginSettings]);
 
     // Determine if the current context supports ReturnOrders
     const supportsReturnOrders = useMemo(() => {
@@ -99,7 +101,7 @@ function OrderHistoryPanel({context}: {context: any}) {
 
         switch (context.model) {
             case 'part':
-                return context.instance?.is_salable;
+                return context.instance?.salable;
             case 'company':
                 return context.instance?.is_customer;
             case 'sales':
@@ -108,7 +110,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                 return false;
         }
 
-    }, [context]);
+    }, [context.user, context.instance, pluginSettings]);
 
     // Determine if current context supports BuildOrders
     const supportsBuildOrders = useMemo(() => {
@@ -132,7 +134,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                 return false;
         }
 
-    }, [context]);
+    }, [context.user, context.instance, pluginSettings]);
 
     // Determine which "types" of orders are valid for the current context
     const validOrderTypes = useMemo(() => {
@@ -184,6 +186,26 @@ function OrderHistoryPanel({context}: {context: any}) {
         }
     }, [orderType, validOrderTypes]);
 
+    // Memoize the query parameters based on the current context
+    const queryParams: any = useMemo(() => {
+        return {
+            start_date: dayjs(startDate).format('YYYY-MM-DD'),
+            end_date: dayjs(endDate).format('YYYY-MM-DD'),
+            period: period,
+            part: context.model == 'part' ? context.id : undefined,
+            company: context.model == 'company' ? context.id : undefined,
+            supplier_part: context.model == 'supplierpart' ? context.id : undefined,
+            order_type: orderType
+        };
+    }, [
+        startDate,
+        endDate,
+        period,
+        orderType,
+        context.id,
+        context.model,
+    ])
+
     // Request order history data from the API
     useEffect(() => {
 
@@ -193,24 +215,37 @@ function OrderHistoryPanel({context}: {context: any}) {
             return;
         }
 
-        context?.api?.get(ORDER_HISTORY_URL, {
-            params: {
-                start_date: dayjs(startDate).format('YYYY-MM-DD'),
-                end_date: dayjs(endDate).format('YYYY-MM-DD'),
-                period: period,
-                part: context.model == 'part' ? context.id : undefined,
-                company: context.model == 'company' ? context.id : undefined,
-                supplier_part: context.model == 'supplierpart' ? context.id : undefined,
-                order_type: orderType,
+        if (context.api) {
+
+            setLoading(true);
+
+            context?.api?.get(`/${ORDER_HISTORY_URL}`, {
+                params: queryParams,
+            }).then((response: any) => {
+                setHistoryData(response.data);
+                setLoading(false);
+            }).catch(() => {
+                console.error("ERR: Failed to fetch history data");
+                setHistoryData([]);
+                setLoading(false);
+            });
+        }
+
+    }, [queryParams, context.api, orderType]);
+
+    const downloadData = useCallback((fileFormat: string) => {
+
+        let url = `${context.host}${ORDER_HISTORY_URL}?export=${fileFormat}`;
+
+        Object.keys(queryParams).forEach((key) => {
+            if (queryParams[key]) {
+                url += `&${key}=${queryParams[key]}`;
             }
-        }).then((response: any) => {
-            setHistoryData(response.data);
-        }).catch(() => {
-            console.error("ERR: Failed to fetch history data");
-            setHistoryData([]);
         });
 
-    }, [startDate, endDate, period, orderType, context.model, context.id]);
+        window.open(url, '_blank');
+
+    }, [context.host, queryParams]);
 
     // Return a chart series for each history entry
     const chartSeries: BarChartSeries[] = useMemo(() => {
@@ -223,7 +258,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                 return {
                     name: partKey,
                     label: part?.full_name ?? part?.name ?? part,
-                    color: 'blue.6',
+                    // color: 'blue.6',
                 };
             }) ?? []
         );
@@ -263,7 +298,8 @@ function OrderHistoryPanel({context}: {context: any}) {
     return (
         <>
         <Paper withBorder p="sm" m="sm">
-        <Group gap="xs">
+        <Group gap="xs" justify='space-apart' grow>
+            <Group gap="xs">
             <Select
                 data={validOrderTypes}
                 value={orderType}
@@ -307,9 +343,23 @@ function OrderHistoryPanel({context}: {context: any}) {
                 label={`Grouping Period`}
             />
             </Group>
+            <Group gap="xs" justify='flex-end'>
+                <Menu>
+                    <Menu.Target>
+                        <Button>Export Data</Button>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                        <Menu.Item onClick={() => downloadData('csv')}>CSV</Menu.Item>
+                        <Menu.Item onClick={() => downloadData('xls')} >XLS</Menu.Item>
+                        <Menu.Item onClick={() => downloadData('xlsx')}>XLSX</Menu.Item>
+                    </Menu.Dropdown>
+                </Menu>
+            </Group>
+            </Group>
             </Paper>
         <Paper withBorder p="sm" m="sm">
-            {hasData ? (
+            <LoadingOverlay visible={loading} />
+            {(hasData || loading) ? (
                 <Card>
                 <BarChart
                     h={500}
