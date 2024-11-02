@@ -47,8 +47,24 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
         },
     }
 
+    def setup_urls(self):
+        """Returns the URLs defined by this plugin."""
+
+        from django.urls import path
+        from .views import HistoryView
+
+        return [
+            path('history/', HistoryView.as_view(), name='order-history'),
+        ]
+
+
     def get_ui_panels(self, request, context=None, **kwargs):
         """Return a list of UI panels to be rendered in the InvenTree user interface."""
+
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return []
 
         target = context.get('target_model')
         pk = context.get('target_id')
