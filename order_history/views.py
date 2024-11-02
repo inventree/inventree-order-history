@@ -106,7 +106,53 @@ class HistoryView(APIView):
     def generate_purchase_order_history(self):
         """Generate purchase order history data."""
 
-        return []
+        from order.models import PurchaseOrderLineItem
+        from order.status_codes import PurchaseOrderStatusGroups
+
+        lines = PurchaseOrderLineItem.objects.filter(
+            order__status__in=PurchaseOrderStatusGroups.COMPLETE,
+            received__gt=0
+        ).prefetch_related(
+            'part', 'part__part', 'order'
+        )
+
+        if self.part:
+            parts = self.part.get_descendants(include_self=True)
+            lines = lines.filter(part__in=parts)
+
+        # TODO: Account for orders lines which have been received but not yet completed
+
+        # Filter by date range
+        lines = lines.exclude(order__complete_date=None).filter(
+            order__complete_date__gte=self.start_date,
+            order__complete_date__lte=self.end_date
+        )
+        
+        # Exclude any lines which do not map to an internal part
+        lines = lines.exclude(part__part=None)
+
+        # Construct a dictionary of purchase history data to part ID
+        history_items = {}
+        parts = {}
+
+        for line in lines:
+            part = line.part.part
+
+            part_history = history_items.get(part.pk, None) or {}
+
+            if part.pk not in parts:
+                parts[part.pk] = part
+
+            date_key = helpers.convert_date(line.order.complete_date, self.period)
+            date_entry = part_history.get(date_key, 0)
+            date_entry += line.received
+
+            # Save data back into the dictionary
+            part_history[date_key] = date_entry
+            history_items[part.pk] = part_history
+
+        return self.format_response(parts, history_items)
+
 
     def generate_sales_order_history(self):
         """Generate sales order history data."""
