@@ -66,7 +66,7 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
         """Determines whether the order history panel should be visible."""
 
         from part.models import Part
-        from company.models import Company
+        from company.models import Company, SupplierPart
 
         # Display for the 'build index' page
         if target == 'manufacturing':
@@ -74,6 +74,10 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
 
         # Display for the 'purchase order index' page
         if target == 'purchasing':
+            return self.plugin_settings.get('PURCHASE_ORDER_HISTORY')
+
+        # Display for a 'supplierpart' object
+        if target == 'supplierpart':
             return self.plugin_settings.get('PURCHASE_ORDER_HISTORY')
 
         # Display for the 'sales' page
@@ -101,13 +105,13 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
             try:
                 part = Part.objects.get(pk=pk)
 
-                if part.assembly() and self.plugin_settings.get('BUILD_ORDER_HISTORY'):
+                if part.assembly and self.plugin_settings.get('BUILD_ORDER_HISTORY'):
                     return True
                 
-                if part.purchaseable() and self.plugin_settings.get('PURCHASE_ORDER_HISTORY'):
+                if part.purchaseable and self.plugin_settings.get('PURCHASE_ORDER_HISTORY'):
                     return True
                 
-                if part.is_salable() and (self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
+                if part.salable and (self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
                     return True
 
                 return False

@@ -33,6 +33,8 @@ class HistoryView(APIView):
         self.period = data.get('period', 'M')
         self.order_type = data.get('order_type')
         self.part = data.get('part')
+        self.company = data.get('company')
+        self.supplier_part = data.get('supplier_part')
         self.export_format = data.get('export')
 
         # Construct the date range
@@ -116,9 +118,18 @@ class HistoryView(APIView):
             'part', 'part__part', 'order'
         )
 
+        # Filter by part
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(part__in=parts)
+
+        # Filter by supplier part
+        if self.supplier_part:
+            lines = lines.filter(part=self.supplier_part)
+
+        # Filter by supplier
+        if self.company:
+            lines = lines.filter(order__supplier=self.company)
 
         # TODO: Account for orders lines which have been received but not yet completed
 
@@ -169,9 +180,14 @@ class HistoryView(APIView):
             'part', 'order', 'allocations'
         )
 
+        # Filter by part
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(part__in=parts)
+
+        # Filter by customer
+        if self.company:
+            lines = lines.filter(order__customer=self.company)
 
         # TODO: Account for order lines which have been shipped but not yet completed
 
@@ -216,10 +232,15 @@ class HistoryView(APIView):
             'item', 'item__part', 'order'
         )
 
+        # Filter by part
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(item__part__in=parts)
         
+        # Filter by customer
+        if self.company:
+            lines = lines.filter(order__customer=self.company)
+
         # TODO: Account for return lines which have been completed but not yet received
 
         # Filter by date range

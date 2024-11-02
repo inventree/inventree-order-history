@@ -3,6 +3,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from company.models import Company, SupplierPart
 from part.models import Part
 from part.serializers import PartBriefSerializer
 
@@ -17,6 +18,8 @@ class OrderHistoryRequestSerializer(serializers.Serializer):
             'period',
             'order_type',
             'part',
+            'company',
+            'supplier_part',
             'export'
         ]
 
@@ -40,6 +43,14 @@ class OrderHistoryRequestSerializer(serializers.Serializer):
 
     part = serializers.PrimaryKeyRelatedField(
         queryset=Part.objects.all(), many=False, required=False, label=_('Part')
+    )
+
+    supplier_part = serializers.PrimaryKeyRelatedField(
+        queryset=SupplierPart.objects.all(), many=False, required=False, label=_('Supplier Part')
+    )
+
+    company = serializers.PrimaryKeyRelatedField(
+        queryset=Company.objects.all(), many=False, required=False, label=_('Company')
     )
 
     export = serializers.ChoiceField(

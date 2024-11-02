@@ -1,9 +1,9 @@
 import { BarChart, BarChartSeries } from '@mantine/charts';
 import { Alert, Card, Group, MantineProvider, Paper, Select, Text} from '@mantine/core';
 import { DateValue, MonthPickerInput } from '@mantine/dates';
-import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import dayjs from 'dayjs';
 
 
 const ORDER_HISTORY_URL = "/plugin/order_history/history/";
@@ -11,6 +11,9 @@ const ORDER_HISTORY_URL = "/plugin/order_history/history/";
 type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
 function OrderHistoryPanel({context}: {context: any}) {
+
+    // Plugin settings object
+    const pluginSettings = useMemo(() => context?.context?.settings ?? {}, [context]);
 
     // Starting date for the order history
     const [startDate, setStartDate ] = useState<Date>(
@@ -22,43 +25,164 @@ function OrderHistoryPanel({context}: {context: any}) {
         dayjs().add(1, 'month').toDate()
       );
 
+    // Grouping period for the order history
     const [ period, setPeriod ] = useState<OrderHistoryPeriod>('M');
 
+    // Order history data (loaded via the API)
     const [ historyData, setHistoryData ] = useState<any[]>([]);
+
+    // Determine if current context supports PurchaseOrders
+    const supportsPurchaseOrders = useMemo(() => {
+
+        // User must have permission to view purchase orders
+        if (!context?.user?.hasViewRole('purchase_order')) {
+            return false;
+        }
+
+        // PurchaseOrder history disabled for plugin
+        if (!pluginSettings.PURCHASE_ORDER_HISTORY) {
+            return false;
+        }
+
+        switch (context.model) {
+            case 'part':
+                return context.instance?.purchaseable;
+            case 'company':
+                return context?.instance?.is_supplier;
+            case 'purchasing':
+            case 'supplierpart':
+                return true;
+            default:
+                return false;
+        }
+
+    }, [pluginSettings, context]);
+
+    // Determine if current context supports SalesOrders
+    const supportsSalesOrders = useMemo(() => {
+
+        // User must have permission to view sales orders
+        if (!context?.user?.hasViewRole('sales_order')) {
+            return false;
+        }
+
+        // SalesOrder history disabled for plugin
+        if (!pluginSettings.SALES_ORDER_HISTORY) {
+            return false;
+        }
+
+        switch (context.model) {
+            case 'part':
+                return context.instance?.salable;
+            case 'company':
+                return context.instance?.is_customer;
+            case 'sales':
+                return true;
+            default:
+                return false;
+        }
+
+    }, [context]);
+
+    // Determine if the current context supports ReturnOrders
+    const supportsReturnOrders = useMemo(() => {
+
+        // User must have permission to view return orders
+        if (!context?.user?.hasViewRole('return_order')) {
+            return false;
+        }
+
+        // ReturnOrder history disabled for plugin
+        if (!pluginSettings.RETURN_ORDER_HISTORY) {
+            return false;
+        }
+
+        switch (context.model) {
+            case 'part':
+                return context.instance?.is_salable;
+            case 'company':
+                return context.instance?.is_customer;
+            case 'sales':
+                return true;
+            default:
+                return false;
+        }
+
+    }, [context]);
+
+    // Determine if current context supports BuildOrders
+    const supportsBuildOrders = useMemo(() => {
+
+        // User must have permission to view build orders
+        if (!context?.user?.hasViewRole('build')) {
+            return false;
+        }
+
+        // BuildOrder history disabled for plugin
+        if (!pluginSettings.BUILD_ORDER_HISTORY) {
+            return false;
+        }
+
+        switch (context.model) {
+            case 'part':
+                return context.instance?.assembly;
+            case 'manufacturing':
+                return true;
+            default:
+                return false;
+        }
+
+    }, [context]);
 
     // Determine which "types" of orders are valid for the current context
     const validOrderTypes = useMemo(() => {
 
         let types = [];
 
-        // Allow "all" types for now...
-        types = [
-            {
-                value: 'purchase',
-                label: 'Purchase Orders'
-            },
-            {
-                value: 'sales',
-                label: 'Sales Orders'
-            },
-            {
+        if (supportsBuildOrders) {
+            types.push({
                 value: 'build',
                 label: 'Build Orders'
-            },
-            {
+            });
+        }
+
+        if (supportsPurchaseOrders) {
+            types.push({
+                value: 'purchase',
+                label: 'Purchase Orders'
+            });
+        }
+
+        if (supportsSalesOrders) {
+            types.push({
+                value: 'sales',
+                label: 'Sales Orders'
+            });
+        }
+
+        if (supportsReturnOrders) {
+            types.push({
                 value: 'return',
                 label: 'Return Orders'
-            }
-        ];
+            });
+        }
 
         return types;
-    }, []);
+    }, [
+        supportsPurchaseOrders,
+        supportsSalesOrders,
+        supportsBuildOrders,
+        supportsReturnOrders
+    ]);
 
     const [ orderType, setOrderType ] = useState<string | null>(null);
 
     useEffect(() => {
-        setOrderType('purchase');
-    }, []);
+
+        if (!validOrderTypes.find((type) => type.value == orderType)) {
+            setOrderType(validOrderTypes[0]?.value ?? null);
+        }
+    }, [orderType, validOrderTypes]);
 
     // Request order history data from the API
     useEffect(() => {
@@ -74,8 +198,9 @@ function OrderHistoryPanel({context}: {context: any}) {
                 start_date: dayjs(startDate).format('YYYY-MM-DD'),
                 end_date: dayjs(endDate).format('YYYY-MM-DD'),
                 period: period,
-                part: context.model == 'part' ? context.instance?.pk : undefined,
-                company: context.model == 'company' ? context.instance?.pk : undefined,
+                part: context.model == 'part' ? context.id : undefined,
+                company: context.model == 'company' ? context.id : undefined,
+                supplier_part: context.model == 'supplierpart' ? context.id : undefined,
                 order_type: orderType,
             }
         }).then((response: any) => {
@@ -85,7 +210,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             setHistoryData([]);
         });
 
-    }, [startDate, endDate, period, orderType, context.model, context.instance]);
+    }, [startDate, endDate, period, orderType, context.model, context.id]);
 
     // Return a chart series for each history entry
     const chartSeries: BarChartSeries[] = useMemo(() => {
@@ -142,7 +267,6 @@ function OrderHistoryPanel({context}: {context: any}) {
             <Select
                 data={validOrderTypes}
                 value={orderType}
-                disabled={validOrderTypes.length <= 1}
                 onChange={(value: string | null) => {
                     if (value) {
                         setOrderType(value);
@@ -196,7 +320,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                     />
                 </Card>
             ) : (
-                <Alert color="blue" title="No data available">
+                <Alert color="blue" title="No Data Available">
                     <Text>No order history data found, based on the provided parameters</Text>
                 </Alert>
             )}
@@ -213,8 +337,6 @@ function OrderHistoryPanel({context}: {context: any}) {
  * @param context - The context object to pass to the panel
  */
 export function renderPanel(target: HTMLElement, context: any) {
-
-    console.log("renderPanel:", context);
 
     createRoot(target).render(
         <MantineProvider>
