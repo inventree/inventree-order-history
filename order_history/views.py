@@ -15,6 +15,7 @@ from InvenTree.helpers import DownloadFile
 from . import helpers
 from . import serializers
 
+
 class HistoryView(APIView):
     """View for generating order history data."""
 
@@ -163,7 +164,6 @@ class HistoryView(APIView):
             history_items[part.pk] = part_history
 
         return self.format_response(parts, history_items, 'purchase')
-
 
     def generate_sales_order_history(self):
         """Generate sales order history data."""
