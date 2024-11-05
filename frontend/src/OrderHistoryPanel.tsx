@@ -1,5 +1,5 @@
 import { BarChart, BarChartSeries } from '@mantine/charts';
-import { Alert, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
+import { Alert, Box, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
 import { DateValue, MonthPickerInput } from '@mantine/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -388,6 +388,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             </Group>
             </Paper>
         <Paper withBorder p="sm" m="sm">
+            <Box pos="relative">
             <LoadingOverlay visible={loading} />
             {(hasData || loading) ? (
                 <Card>
@@ -404,6 +405,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                     <Text>No order history data found, based on the provided parameters</Text>
                 </Alert>
             )}
+            </Box>
         </Paper>
         </>
     );
