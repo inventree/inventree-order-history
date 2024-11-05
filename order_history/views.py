@@ -102,7 +102,7 @@ class HistoryView(APIView):
             if date_key not in history_items[part.pk]:
                 history_items[part.pk][date_key] = 0
 
-            history_items[part.pk][date_key] += build.quantity
+            history_items[part.pk][date_key] += build.completed
 
         return self.format_response(parts, history_items, 'build')
 
