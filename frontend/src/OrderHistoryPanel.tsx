@@ -251,7 +251,13 @@ function OrderHistoryPanel({context}: {context: any}) {
     // Callback to download the order history data in a specific format
     const downloadData = useCallback((fileFormat: string) => {
 
-        let url = `${context.host}${ORDER_HISTORY_URL}?export=${fileFormat}`;
+        let url = `${ORDER_HISTORY_URL}?export=${fileFormat}`;
+
+        if (context.host) {
+            url = `${context.host}${url}`;
+        } else {
+            url = `${window.location.origin}/${url}`;
+        }
 
         Object.keys(queryParams).forEach((key) => {
             if (queryParams[key]) {
