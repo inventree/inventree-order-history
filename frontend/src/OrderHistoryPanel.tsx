@@ -4,6 +4,7 @@ import { DateValue, MonthPickerInput } from '@mantine/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import dayjs from 'dayjs';
+import { IconFileDownload } from '@tabler/icons-react';
 
 type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
@@ -376,7 +377,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             <Group gap="xs" justify='flex-end'>
                 <Menu>
                     <Menu.Target>
-                        <Button>Export Data</Button>
+                        <Button leftSection={<IconFileDownload />}>Export</Button>
                     </Menu.Target>
                     <Menu.Dropdown>
                         <Menu.Item onClick={() => downloadData('csv')}>CSV</Menu.Item>
