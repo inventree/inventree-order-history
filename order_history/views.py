@@ -84,6 +84,9 @@ class HistoryView(APIView):
             completion_date__lte=self.end_date
         )
 
+        # Exclude builds which have no completed stock
+        builds = builds.exclude(completed=0)
+
         # Construct a dict of order quantities for each part type
         parts = {}
         history_items = {}
@@ -102,7 +105,7 @@ class HistoryView(APIView):
             if date_key not in history_items[part.pk]:
                 history_items[part.pk][date_key] = 0
 
-            history_items[part.pk][date_key] += build.quantity
+            history_items[part.pk][date_key] += build.completed
 
         return self.format_response(parts, history_items, 'build')
 
@@ -144,6 +147,9 @@ class HistoryView(APIView):
         
         # Exclude any lines which do not map to an internal part
         lines = lines.exclude(part__part=None)
+
+        # Exclude lines which have no received stock
+        lines = lines.exclude(received=0)
 
         # Construct a dictionary of purchase history data to part ID
         history_items = {}
@@ -198,6 +204,9 @@ class HistoryView(APIView):
             order__shipment_date__gte=self.start_date,
             order__shipment_date__lte=self.end_date
         )
+
+        # Exclude lines which have no shipped stock
+        lines = lines.exclude(shipped=0)
 
         # Construct a dictionary of sales history data to part ID
         history_items = {}
