@@ -117,6 +117,8 @@ class HistoryView(APIView):
             received__gt=0
         ).prefetch_related(
             'part', 'part__part', 'order'
+        ).select_related(
+            'part__part__pricing_data'
         )
 
         # Filter by part
@@ -176,6 +178,8 @@ class HistoryView(APIView):
             shipped__gt=0
         ).prefetch_related(
             'part', 'order', 'allocations'
+        ).select_related(
+            'part__pricing_data'
         )
 
         # Filter by part
@@ -228,6 +232,8 @@ class HistoryView(APIView):
             order__status__in=ReturnOrderStatusGroups.COMPLETE,
         ).prefetch_related(
             'item', 'item__part', 'order'
+        ).select_related(
+            'item__part__pricing_data'
         )
 
         # Filter by part

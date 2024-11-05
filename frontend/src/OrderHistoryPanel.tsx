@@ -1,9 +1,10 @@
 import { BarChart, BarChartSeries } from '@mantine/charts';
-import { Alert, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
+import { Alert, Box, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
 import { DateValue, MonthPickerInput } from '@mantine/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import dayjs from 'dayjs';
+import { IconFileDownload } from '@tabler/icons-react';
 
 type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
@@ -376,7 +377,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             <Group gap="xs" justify='flex-end'>
                 <Menu>
                     <Menu.Target>
-                        <Button>Export Data</Button>
+                        <Button leftSection={<IconFileDownload />}>Export</Button>
                     </Menu.Target>
                     <Menu.Dropdown>
                         <Menu.Item onClick={() => downloadData('csv')}>CSV</Menu.Item>
@@ -388,6 +389,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             </Group>
             </Paper>
         <Paper withBorder p="sm" m="sm">
+            <Box pos="relative">
             <LoadingOverlay visible={loading} />
             {(hasData || loading) ? (
                 <Card>
@@ -404,6 +406,7 @@ function OrderHistoryPanel({context}: {context: any}) {
                     <Text>No order history data found, based on the provided parameters</Text>
                 </Alert>
             )}
+            </Box>
         </Paper>
         </>
     );
