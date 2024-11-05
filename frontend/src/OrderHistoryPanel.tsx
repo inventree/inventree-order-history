@@ -298,7 +298,15 @@ function OrderHistoryPanel({context}: {context: any}) {
             entries.forEach((entry: any) => {
                 // Find matching date entry in the data
                 let dateEntry = data[entry.date] || {};
-                dateEntry[partKey] = entry.quantity;
+
+                // Add a dummy value to ensure that the date is included in the final data
+                dateEntry['_dummy'] = 0;
+
+                // Only display non-zero entries
+                if (entry.quantity > 0) {
+                    dateEntry[partKey] = entry.quantity;
+                }
+
                 data[entry.date] = dateEntry;
             });
         });
