@@ -127,7 +127,7 @@ class HistoryView(APIView):
         # Filter by part
         if self.part:
             parts = self.part.get_descendants(include_self=True)
-            lines = lines.filter(part__in=parts)
+            lines = lines.filter(part__part__in=parts)
 
         # Filter by supplier part
         if self.supplier_part:
