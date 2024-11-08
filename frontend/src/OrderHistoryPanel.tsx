@@ -30,6 +30,8 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     const [ loading, setLoading ] = useState<boolean>(true);
 
+    const [ error, setError ] = useState<boolean>(false);
+
     // Plugin settings object
     const pluginSettings = useMemo(() => context?.context?.settings ?? {}, [context]);
 
@@ -197,7 +199,7 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     // Ensure that the selected order type is valid for the current context
     useEffect(() => {
-        if (!validOrderTypes.find((type) => type.value == orderType)) {
+        if (!validOrderTypes.find((type: any) => type.value == orderType)) {
             setOrderType(validOrderTypes[0]?.value ?? null);
         }
     }, [orderType, validOrderTypes]);
@@ -240,10 +242,12 @@ function OrderHistoryPanel({context}: {context: any}) {
             }).then((response: any) => {
                 setHistoryData(response.data);
                 setLoading(false);
+                setError(false);
             }).catch(() => {
                 console.error("ERR: Failed to fetch history data");
                 setHistoryData([]);
                 setLoading(false);
+                setError(true);
             });
         }
 
@@ -391,6 +395,11 @@ function OrderHistoryPanel({context}: {context: any}) {
         <Paper withBorder p="sm" m="sm">
             <Box pos="relative">
             <LoadingOverlay visible={loading} />
+            {error && (
+                <Alert color="red" title="Error Loading Data">
+                    <Text>Failed to load order history data from the server</Text>
+                </Alert>
+            )}
             {(hasData || loading) ? (
                 <Card>
                 <BarChart

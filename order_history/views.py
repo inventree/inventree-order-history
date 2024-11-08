@@ -94,6 +94,10 @@ class HistoryView(APIView):
         for build in builds:
             part = build.part
 
+            if not part:
+                # Skip builds which do not map to a part (may have been deleted, for example)
+                continue
+
             if part.pk not in parts:
                 parts[part.pk] = part
 
@@ -156,6 +160,11 @@ class HistoryView(APIView):
         parts = {}
 
         for line in lines:
+
+            if not line.part or not line.part.part:
+                # Skip lines which do not map to a part (may have been deleted, for example)
+                continue
+
             part = line.part.part
 
             part_history = history_items.get(part.pk, None) or {}
@@ -215,6 +224,10 @@ class HistoryView(APIView):
         for line in lines:
             part = line.part
 
+            if not part:
+                # Skip lines which do not map to a part (may have been deleted, for example)
+                continue
+
             # Extract the date key for the line item
             part_history = history_items.get(part.pk, None) or {}
 
@@ -267,6 +280,10 @@ class HistoryView(APIView):
 
         for line in lines:
             part = line.item.part
+
+            if not part:
+                # Skip lines which do not map to a part (may have been deleted, for example)
+                continue
 
             # Extract the date key for the line item
             part_history = history_items.get(part.pk, None) or {}
