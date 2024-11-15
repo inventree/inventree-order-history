@@ -2,9 +2,12 @@ import { BarChart, BarChartSeries } from '@mantine/charts';
 import { Alert, Box, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
 import { DateValue, MonthPickerInput } from '@mantine/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { QueryClient, useQuery } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
 import dayjs from 'dayjs';
 import { IconFileDownload } from '@tabler/icons-react';
+
+const queryClient = new QueryClient();
 
 type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
@@ -28,10 +31,6 @@ const COLOR_WHEEL = [
 
 function OrderHistoryPanel({context}: {context: any}) {
 
-    const [ loading, setLoading ] = useState<boolean>(true);
-
-    const [ error, setError ] = useState<boolean>(false);
-
     // Plugin settings object
     const pluginSettings = useMemo(() => context?.context?.settings ?? {}, [context]);
 
@@ -47,9 +46,6 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     // Grouping period for the order history
     const [ period, setPeriod ] = useState<OrderHistoryPeriod>('M');
-
-    // Order history data (loaded via the API)
-    const [ historyData, setHistoryData ] = useState<any[]>([]);
 
     // Determine if current context supports PurchaseOrders
     const supportsPurchaseOrders = useMemo(() => {
@@ -224,34 +220,31 @@ function OrderHistoryPanel({context}: {context: any}) {
         context.model,
     ])
 
-    // Request order history data from the API
-    useEffect(() => {
-
-        // Order type must be provided
-        if (!orderType) {
-            setHistoryData([]);
-            return;
-        }
-
-        if (context.api) {
-
-            setLoading(true);
-
-            context?.api?.get(`/${ORDER_HISTORY_URL}`, {
-                params: queryParams,
-            }).then((response: any) => {
-                setHistoryData(response.data);
-                setLoading(false);
-                setError(false);
-            }).catch(() => {
-                console.error("ERR: Failed to fetch history data");
-                setHistoryData([]);
-                setLoading(false);
-                setError(true);
-            });
-        }
-
-    }, [queryParams, context.api, orderType]);
+    const historyQuery = useQuery(
+        {
+            queryKey: [
+                'order-history',
+                startDate,
+                endDate,
+                period,
+                orderType,
+                context.id,
+                context.model,
+            ],
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            queryFn: async () => {
+                return context.api?.get(`/${ORDER_HISTORY_URL}`, {
+                    params: queryParams,
+                }).then((response: any) => {
+                    return response.data;
+                }).catch(() => {
+                    return [];
+                }) ?? [];
+            }
+        },
+        queryClient
+    )
 
     // Callback to download the order history data in a specific format
     const downloadData = useCallback((fileFormat: string) => {
@@ -277,7 +270,7 @@ function OrderHistoryPanel({context}: {context: any}) {
     // Return a chart series for each history entry
     const chartSeries: BarChartSeries[] = useMemo(() => {
         return (
-            historyData.map((item: any, index: number) => {
+            historyQuery.data?.map((item: any, index: number) => {
                 let part = item?.part ?? {};
                 let partId : number = part?.pk ?? index;
                 let partKey = `id_${partId.toString()}`;
@@ -289,13 +282,13 @@ function OrderHistoryPanel({context}: {context: any}) {
                 };
             }) ?? []
         );
-    }, [historyData]);
+    }, [historyQuery.data]);
 
     // Return chart data for each history entry
     const chartData : any[] = useMemo(() => {
         let data : any = {};
 
-        historyData?.forEach((item: any, index: number) => {
+        historyQuery.data?.forEach((item: any, index: number) => {
             let partId: number = item?.part?.pk ?? index;
             let partKey = `id_${partId.toString()}`;
             let entries: any[] = item?.history ?? [];
@@ -326,7 +319,7 @@ function OrderHistoryPanel({context}: {context: any}) {
             };
         });
 
-    }, [historyData]);
+    }, [historyQuery.data]);
 
     const hasData = useMemo(() => chartData.length > 0 && chartSeries.length > 0, [chartData, chartSeries]);
 
@@ -394,13 +387,13 @@ function OrderHistoryPanel({context}: {context: any}) {
             </Paper>
         <Paper withBorder p="sm" m="sm">
             <Box pos="relative">
-            <LoadingOverlay visible={loading} />
-            {error && (
+            <LoadingOverlay visible={historyQuery.isLoading || historyQuery.isFetching} />
+            {historyQuery.isError && (
                 <Alert color="red" title="Error Loading Data">
                     <Text>Failed to load order history data from the server</Text>
                 </Alert>
             )}
-            {(hasData || loading) ? (
+            {(hasData || historyQuery.isLoading || historyQuery.isFetching) ? (
                 <Card>
                 <BarChart
                     h={500}
