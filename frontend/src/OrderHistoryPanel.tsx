@@ -424,7 +424,7 @@ function OrderHistoryPanel({context}: {context: any}) {
 export function renderPanel(target: HTMLElement, context: any) {
 
     createRoot(target).render(
-        <MantineProvider>
+        <MantineProvider theme={context.theme} defaultColorScheme={context.colorScheme}>
             <OrderHistoryPanel context={context}/>
         </MantineProvider>
     )
