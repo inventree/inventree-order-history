@@ -344,7 +344,7 @@ class HistoryView(APIView):
         # Construct the set of headers
         headers = [_('Part ID'), _('Part Name'), _('IPN'), *self.date_range]
 
-        dataset = tablib.Dataset(headers=headers)
+        dataset = tablib.Dataset(headers=map(str, headers))
 
         # Construct the set of rows
         for part_id, entries in history_items.items():
