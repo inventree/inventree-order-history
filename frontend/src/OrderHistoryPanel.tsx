@@ -1,11 +1,11 @@
-import { BarChart, BarChartSeries } from '@mantine/charts';
-import { Alert, Box, Button, Card, Group, LoadingOverlay, MantineProvider, Menu, Paper, Select, Text} from '@mantine/core';
-import { DateValue, MonthPickerInput } from '@mantine/dates';
+import { BarChart, type BarChartSeries } from '@mantine/charts';
+import { Alert, Box, Button, Card, Group, LoadingOverlay, Menu, Paper, Select, Text} from '@mantine/core';
+import { type DateValue, MonthPickerInput } from '@mantine/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { QueryClient, useQuery } from '@tanstack/react-query';
-import { createRoot } from 'react-dom/client';
 import dayjs from 'dayjs';
 import { IconFileDownload } from '@tabler/icons-react';
+import { checkPluginVersion, UserRoles, type InvenTreePluginContext } from '@inventreedb/ui';
 
 const queryClient = new QueryClient();
 
@@ -29,7 +29,7 @@ const COLOR_WHEEL = [
     'indigo.6',
 ];
 
-function OrderHistoryPanel({context}: {context: any}) {
+function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
 
     // Plugin settings object
     const pluginSettings = useMemo(() => context?.context?.settings ?? {}, [context]);
@@ -51,7 +51,7 @@ function OrderHistoryPanel({context}: {context: any}) {
     const supportsPurchaseOrders = useMemo(() => {
 
         // User must have permission to view purchase orders
-        if (!context?.user?.hasViewRole('purchase_order')) {
+        if (!context?.user?.hasViewRole(UserRoles.purchase_order)) {
             return false;
         }
 
@@ -78,7 +78,7 @@ function OrderHistoryPanel({context}: {context: any}) {
     const supportsSalesOrders = useMemo(() => {
 
         // User must have permission to view sales orders
-        if (!context?.user?.hasViewRole('sales_order')) {
+        if (!context?.user?.hasViewRole(UserRoles.sales_order)) {
             return false;
         }
 
@@ -104,7 +104,7 @@ function OrderHistoryPanel({context}: {context: any}) {
     const supportsReturnOrders = useMemo(() => {
 
         // User must have permission to view return orders
-        if (!context?.user?.hasViewRole('return_order')) {
+        if (!context?.user?.hasViewRole(UserRoles.return_order)) {
             return false;
         }
 
@@ -130,7 +130,7 @@ function OrderHistoryPanel({context}: {context: any}) {
     const supportsBuildOrders = useMemo(() => {
 
         // User must have permission to view build orders
-        if (!context?.user?.hasViewRole('build')) {
+        if (!context?.user?.hasViewRole(UserRoles.build)) {
             return false;
         }
 
@@ -153,7 +153,7 @@ function OrderHistoryPanel({context}: {context: any}) {
     // Determine which "types" of orders are valid for the current context
     const validOrderTypes = useMemo(() => {
 
-        let types = [];
+        const types = [];
 
         if (supportsBuildOrders) {
             types.push({
@@ -222,6 +222,7 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     const historyQuery = useQuery(
         {
+            enabled: !!orderType && !!startDate && !!endDate,
             queryKey: [
                 'order-history',
                 startDate,
@@ -271,9 +272,9 @@ function OrderHistoryPanel({context}: {context: any}) {
     const chartSeries: BarChartSeries[] = useMemo(() => {
         return (
             historyQuery.data?.map((item: any, index: number) => {
-                let part = item?.part ?? {};
-                let partId : number = part?.pk ?? index;
-                let partKey = `id_${partId.toString()}`;
+                const part = item?.part ?? {};
+                const partId : number = part?.pk ?? index;
+                const partKey = `id_${partId.toString()}`;
 
                 return {
                     name: partKey,
@@ -286,16 +287,16 @@ function OrderHistoryPanel({context}: {context: any}) {
 
     // Return chart data for each history entry
     const chartData : any[] = useMemo(() => {
-        let data : any = {};
+        const data : any = {};
 
         historyQuery.data?.forEach((item: any, index: number) => {
-            let partId: number = item?.part?.pk ?? index;
-            let partKey = `id_${partId.toString()}`;
-            let entries: any[] = item?.history ?? [];
+            const partId: number = item?.part?.pk ?? index;
+            const partKey = `id_${partId.toString()}`;
+            const entries: any[] = item?.history ?? [];
 
             entries.forEach((entry: any) => {
                 // Find matching date entry in the data
-                let dateEntry = data[entry.date] || {};
+                const dateEntry = data[entry.date] || {};
 
                 // Add a dummy value to ensure that the date is included in the final data
                 dateEntry['_dummy'] = 0;
@@ -310,7 +311,7 @@ function OrderHistoryPanel({context}: {context: any}) {
         });
 
         // Sort the data by date
-        let sortedData = Object.keys(data).sort();
+        const sortedData = Object.keys(data).sort();
 
         return sortedData.map((date: string) => {
             return {
@@ -421,12 +422,9 @@ function OrderHistoryPanel({context}: {context: any}) {
  * @param target - The target HTML element to render the panel into
  * @param context - The context object to pass to the panel
  */
-export function renderPanel(target: HTMLElement, context: any) {
-
-    createRoot(target).render(
-        <MantineProvider theme={context.theme} defaultColorScheme={context.colorScheme}>
-            <OrderHistoryPanel context={context}/>
-        </MantineProvider>
-    )
-
+export function renderPanel(context: InvenTreePluginContext) {
+    checkPluginVersion(context);
+    return (
+        <OrderHistoryPanel context={context}/>
+    );
 }
