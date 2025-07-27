@@ -4,8 +4,8 @@ import { type DateValue, MonthPickerInput } from '@mantine/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { IconFileDownload } from '@tabler/icons-react';
-import { checkPluginVersion, UserRoles, type InvenTreePluginContext } from '@inventreedb/ui';
+import { IconFileDownload, IconInfoCircle } from '@tabler/icons-react';
+import { initPlugin, UserRoles, type InvenTreePluginContext } from '@inventreedb/ui';
 
 const queryClient = new QueryClient();
 
@@ -405,7 +405,7 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
                     />
                 </Card>
             ) : (
-                <Alert color="blue" title="No Data Available">
+                <Alert color="blue" title="No Data Available" icon={<IconInfoCircle />}>
                     <Text>No order history data found, based on the provided parameters</Text>
                 </Alert>
             )}
@@ -423,7 +423,7 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
  * @param context - The context object to pass to the panel
  */
 export function renderPanel(context: InvenTreePluginContext) {
-    checkPluginVersion(context);
+    initPlugin(context);
     return (
         <OrderHistoryPanel context={context}/>
     );
