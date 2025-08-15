@@ -256,7 +256,7 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
   // Callback to download the order history data in a specific format
   const downloadData = useCallback(
     (fileFormat: string) => {
-      let url = `${ORDER_HISTORY_URL}?export=${fileFormat}`;
+      let url = `/${ORDER_HISTORY_URL}?export=${fileFormat}`;
 
       if (context.host) {
         url = `${context.host}${url}`;
