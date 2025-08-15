@@ -192,16 +192,12 @@ class HistoryView(APIView):
         from order.status_codes import SalesOrderStatusGroups
 
         lines = SalesOrderLineItem.objects.filter(
-            order__status__in=SalesOrderStatusGroups.COMPLETE,
             shipped__gt=0
         ).prefetch_related(
             'part', 'order', 'allocations'
         ).select_related(
             'part__pricing_data'
         )
-
-        # Exclude lines which have no shipped stock
-        lines = lines.exclude(shipped=0)
 
         # Filter by part
         if self.part:
@@ -235,7 +231,7 @@ class HistoryView(APIView):
             'line',
             'line__part',
             'line__part__pricing_data'
-        )
+        ).distinct()
 
         # Construct a dictionary of sales history data to part ID
         history_items = {}
