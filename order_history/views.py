@@ -183,9 +183,12 @@ class HistoryView(APIView):
         return self.format_response(parts, history_items, 'purchase')
 
     def generate_sales_order_history(self):
-        """Generate sales order history data."""
+        """Generate sales order history data.
+        
+        - We need to account for the possibility of split-shipments
+        """
 
-        from order.models import SalesOrderLineItem
+        from order.models import SalesOrderAllocation, SalesOrderLineItem, SalesOrderShipment
         from order.status_codes import SalesOrderStatusGroups
 
         lines = SalesOrderLineItem.objects.filter(
@@ -197,6 +200,9 @@ class HistoryView(APIView):
             'part__pricing_data'
         )
 
+        # Exclude lines which have no shipped stock
+        lines = lines.exclude(shipped=0)
+
         # Filter by part
         if self.part:
             parts = self.part.get_descendants(include_self=True)
@@ -206,22 +212,39 @@ class HistoryView(APIView):
         if self.company:
             lines = lines.filter(order__customer=self.company)
 
-        # TODO: Account for order lines which have been shipped but not yet completed
-
-        # Filter by date range
-        lines = lines.exclude(order__shipment_date=None).filter(
-            order__shipment_date__gte=self.start_date,
-            order__shipment_date__lte=self.end_date
+        # Find all "allocations" for shipments which have actually shipped
+        # This will tell us when the individual line items were sent out
+        allocations = SalesOrderAllocation.objects.filter(
+            line__in=lines
+        ).exclude(
+            shipment=None
+        ).exclude(
+            shipment__shipment_date__isnull=True
         )
 
-        # Exclude lines which have no shipped stock
-        lines = lines.exclude(shipped=0)
+        # Filter allocations by date range
+        allocations = allocations.filter(
+            shipment__shipment_date__gte=self.start_date,
+            shipment__shipment_date__lte=self.end_date
+        )
+
+        # Prefetch related data
+        allocations = allocations.prefetch_related(
+            'shipment',
+            'shipment__order',
+            'line',
+            'line__part',
+            'line__part__pricing_data'
+        )
 
         # Construct a dictionary of sales history data to part ID
         history_items = {}
         parts = {}
 
-        for line in lines:
+        for allocation in allocations:
+            line = allocation.line
+            shipment = allocation.shipment
+            quantity = allocation.quantity
             part = line.part
 
             if not part:
@@ -234,9 +257,9 @@ class HistoryView(APIView):
             if part.pk not in parts:
                 parts[part.pk] = part
 
-            date_key = helpers.convert_date(line.order.shipment_date, self.period)
+            date_key = helpers.convert_date(shipment.shipment_date, self.period)
             date_entry = part_history.get(date_key, 0)
-            date_entry += line.shipped
+            date_entry += quantity
 
             # Save data back into the dictionary
             part_history[date_key] = date_entry
