@@ -77,8 +77,8 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
     }
 
     switch (context.model) {
-            case 'partcategory':
-                return true;
+      case 'partcategory':
+          return true;
       case 'part':
         return context.instance?.purchaseable;
       case 'company':
@@ -104,6 +104,8 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
     }
 
     switch (context.model) {
+      case 'partcategory':
+        return true;
       case 'part':
         return context.instance?.salable;
       case 'company':
@@ -128,6 +130,8 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
     }
 
     switch (context.model) {
+      case 'partcategory':
+        return true;
       case 'part':
         return context.instance?.salable;
       case 'company':
@@ -152,8 +156,8 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
     }
 
     switch (context.model) {
-            case 'partcategory':
-                return true;
+      case 'partcategory':
+          return true;
       case 'part':
         return context.instance?.assembly;
       case 'manufacturing':
