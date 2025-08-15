@@ -46,6 +46,12 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
             'default': True,
             'validator': bool,
         },
+        'CATEGORY_HISTORY': {
+            'name': 'Category History',
+            'description': 'Enable order history panel for part category views',
+            'default': False,
+            'validator': bool,
+        },
         'USER_GROUP': {
             'name': 'Allowed Group',
             'description': 'The user group that is allowed to view order history',
@@ -97,6 +103,10 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
 
             except Exception:
                 return False
+
+        # Display for a part category
+        if target == 'partcategory' and self.get_setting('CATEGORY_HISTORY'):
+            return True
 
         # Display for a particular part
         if target == 'part':

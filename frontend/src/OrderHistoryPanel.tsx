@@ -61,6 +61,8 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
         }
 
         switch (context.model) {
+            case 'partcategory':
+                return true;
             case 'part':
                 return context.instance?.purchaseable;
             case 'company':
@@ -88,6 +90,8 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
         }
 
         switch (context.model) {
+            case 'partcategory':
+                return true;
             case 'part':
                 return context.instance?.salable;
             case 'company':
@@ -114,6 +118,8 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
         }
 
         switch (context.model) {
+            case 'partcategory':
+                return true;
             case 'part':
                 return context.instance?.salable;
             case 'company':
@@ -140,6 +146,8 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
         }
 
         switch (context.model) {
+            case 'partcategory':
+                return true;
             case 'part':
                 return context.instance?.assembly;
             case 'manufacturing':
@@ -206,6 +214,7 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
             start_date: dayjs(startDate).format('YYYY-MM-DD'),
             end_date: dayjs(endDate).format('YYYY-MM-DD'),
             period: period,
+            partcategory: context.model == 'partcategory' ? context.id : undefined,
             part: context.model == 'part' ? context.id : undefined,
             company: context.model == 'company' ? context.id : undefined,
             supplier_part: context.model == 'supplierpart' ? context.id : undefined,

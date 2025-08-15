@@ -34,6 +34,7 @@ class HistoryView(APIView):
         self.period = data.get('period', 'M')
         self.order_type = data.get('order_type')
         self.part = data.get('part')
+        self.category = data.get('category')
         self.company = data.get('company')
         self.supplier_part = data.get('supplier_part')
         self.export_format = data.get('export')
