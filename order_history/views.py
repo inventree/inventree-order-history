@@ -36,6 +36,7 @@ class HistoryView(APIView):
         self.period = data.get("period", "M")
         self.order_type = data.get("order_type")
         self.part = data.get("part")
+        self.partcategory = data.get("partcategory")
         self.company = data.get("company")
         self.supplier_part = data.get("supplier_part")
         self.export_format = data.get("export")
@@ -70,6 +71,9 @@ class HistoryView(APIView):
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             builds = builds.filter(part__in=parts)
+        elif self.partcategory:
+            categories = self.partcategory.get_descendants(include_self=True)
+            builds = builds.filter(part__category__in=categories)
 
         builds = (
             builds.filter(status__in=BuildStatusGroups.COMPLETE, completed__gt=0)
@@ -129,6 +133,9 @@ class HistoryView(APIView):
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(part__part__in=parts)
+        elif self.partcategory:
+            categories = self.partcategory.get_descendants(include_self=True)
+            lines = lines.filter(part__part__category__in=categories)
 
         # Filter by supplier part
         if self.supplier_part:
@@ -199,6 +206,9 @@ class HistoryView(APIView):
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(part__in=parts)
+        elif self.partcategory:
+            categories = self.partcategory.get_descendants(include_self=True)
+            lines = lines.filter(part__category__in=categories)
 
         # Filter by customer
         if self.company:
@@ -275,6 +285,9 @@ class HistoryView(APIView):
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(item__part__in=parts)
+        elif self.partcategory:
+            categories = self.partcategory.get_descendants(include_self=True)
+            lines = lines.filter(item__part__category__in=categories)
 
         # Filter by customer
         if self.company:
