@@ -1,439 +1,447 @@
+import {
+  type InvenTreePluginContext,
+  initPlugin,
+  UserRoles
+} from '@inventreedb/ui';
 import { BarChart, type BarChartSeries } from '@mantine/charts';
-import { Alert, Box, Button, Card, Group, LoadingOverlay, Menu, Paper, Select, Text} from '@mantine/core';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  Group,
+  LoadingOverlay,
+  Menu,
+  Paper,
+  Select,
+  Text
+} from '@mantine/core';
 import { type DateValue, MonthPickerInput } from '@mantine/dates';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { IconFileDownload, IconInfoCircle } from '@tabler/icons-react';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { IconFileDownload, IconInfoCircle } from '@tabler/icons-react';
-import { initPlugin, UserRoles, type InvenTreePluginContext } from '@inventreedb/ui';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const queryClient = new QueryClient();
 
 type OrderHistoryPeriod = 'M' | 'Q' | 'Y';
 
-const ORDER_HISTORY_URL = "plugin/order_history/history/";
+const ORDER_HISTORY_URL = 'plugin/order_history/history/';
 
 const COLOR_WHEEL = [
-    'blue.6',
-    'grape.6',
-    'orange.6',
-    'lime.6',
-    'green.6',
-    'cyan.6',
-    'yellow.6',
-    'violet.6',
-    'red.6',
-    'teal.6',
-    'pink.6',
-    'gray.6',
-    'indigo.6',
+  'blue.6',
+  'grape.6',
+  'orange.6',
+  'lime.6',
+  'green.6',
+  'cyan.6',
+  'yellow.6',
+  'violet.6',
+  'red.6',
+  'teal.6',
+  'pink.6',
+  'gray.6',
+  'indigo.6'
 ];
 
-function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
+function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
+  // Plugin settings object
+  const pluginSettings = useMemo(
+    () => context?.context?.settings ?? {},
+    [context]
+  );
 
-    // Plugin settings object
-    const pluginSettings = useMemo(() => context?.context?.settings ?? {}, [context]);
+  // Starting date for the order history
+  const [startDate, setStartDate] = useState<Date>(
+    dayjs().subtract(1, 'year').toDate()
+  );
 
-    // Starting date for the order history
-    const [startDate, setStartDate ] = useState<Date>(
-        dayjs().subtract(1, 'year').toDate()
-      );
-    
-    // Ending date for the order history
-      const [endDate, setEndDate] = useState<Date>(
-        dayjs().add(1, 'month').toDate()
-      );
+  // Ending date for the order history
+  const [endDate, setEndDate] = useState<Date>(
+    dayjs().add(1, 'month').toDate()
+  );
 
-    // Grouping period for the order history
-    const [ period, setPeriod ] = useState<OrderHistoryPeriod>('M');
+  // Grouping period for the order history
+  const [period, setPeriod] = useState<OrderHistoryPeriod>('M');
 
-    // Determine if current context supports PurchaseOrders
-    const supportsPurchaseOrders = useMemo(() => {
+  // Determine if current context supports PurchaseOrders
+  const supportsPurchaseOrders = useMemo(() => {
+    // User must have permission to view purchase orders
+    if (!context?.user?.hasViewRole(UserRoles.purchase_order)) {
+      return false;
+    }
 
-        // User must have permission to view purchase orders
-        if (!context?.user?.hasViewRole(UserRoles.purchase_order)) {
-            return false;
-        }
+    // PurchaseOrder history disabled for plugin
+    if (!pluginSettings.PURCHASE_ORDER_HISTORY) {
+      return false;
+    }
 
-        // PurchaseOrder history disabled for plugin
-        if (!pluginSettings.PURCHASE_ORDER_HISTORY) {
-            return false;
-        }
-
-        switch (context.model) {
+    switch (context.model) {
             case 'partcategory':
                 return true;
-            case 'part':
-                return context.instance?.purchaseable;
-            case 'company':
-                return context?.instance?.is_supplier;
-            case 'purchasing':
-            case 'supplierpart':
-                return true;
-            default:
-                return false;
-        }
+      case 'part':
+        return context.instance?.purchaseable;
+      case 'company':
+        return context?.instance?.is_supplier;
+      case 'purchasing':
+      case 'supplierpart':
+        return true;
+      default:
+        return false;
+    }
+  }, [context.user, context.instance, pluginSettings]);
 
-    }, [context.user, context.instance, pluginSettings]);
+  // Determine if current context supports SalesOrders
+  const supportsSalesOrders = useMemo(() => {
+    // User must have permission to view sales orders
+    if (!context?.user?.hasViewRole(UserRoles.sales_order)) {
+      return false;
+    }
 
-    // Determine if current context supports SalesOrders
-    const supportsSalesOrders = useMemo(() => {
+    // SalesOrder history disabled for plugin
+    if (!pluginSettings.SALES_ORDER_HISTORY) {
+      return false;
+    }
 
-        // User must have permission to view sales orders
-        if (!context?.user?.hasViewRole(UserRoles.sales_order)) {
-            return false;
-        }
+    switch (context.model) {
+      case 'part':
+        return context.instance?.salable;
+      case 'company':
+        return context.instance?.is_customer;
+      case 'sales':
+        return true;
+      default:
+        return false;
+    }
+  }, [context.user, context.instance, pluginSettings]);
 
-        // SalesOrder history disabled for plugin
-        if (!pluginSettings.SALES_ORDER_HISTORY) {
-            return false;
-        }
+  // Determine if the current context supports ReturnOrders
+  const supportsReturnOrders = useMemo(() => {
+    // User must have permission to view return orders
+    if (!context?.user?.hasViewRole(UserRoles.return_order)) {
+      return false;
+    }
 
-        switch (context.model) {
+    // ReturnOrder history disabled for plugin
+    if (!pluginSettings.RETURN_ORDER_HISTORY) {
+      return false;
+    }
+
+    switch (context.model) {
+      case 'part':
+        return context.instance?.salable;
+      case 'company':
+        return context.instance?.is_customer;
+      case 'sales':
+        return true;
+      default:
+        return false;
+    }
+  }, [context.user, context.instance, pluginSettings]);
+
+  // Determine if current context supports BuildOrders
+  const supportsBuildOrders = useMemo(() => {
+    // User must have permission to view build orders
+    if (!context?.user?.hasViewRole(UserRoles.build)) {
+      return false;
+    }
+
+    // BuildOrder history disabled for plugin
+    if (!pluginSettings.BUILD_ORDER_HISTORY) {
+      return false;
+    }
+
+    switch (context.model) {
             case 'partcategory':
                 return true;
-            case 'part':
-                return context.instance?.salable;
-            case 'company':
-                return context.instance?.is_customer;
-            case 'sales':
-                return true;
-            default:
-                return false;
-        }
+      case 'part':
+        return context.instance?.assembly;
+      case 'manufacturing':
+        return true;
+      default:
+        return false;
+    }
+  }, [context.user, context.instance, pluginSettings]);
 
-    }, [context.user, context.instance, pluginSettings]);
+  // Determine which "types" of orders are valid for the current context
+  const validOrderTypes = useMemo(() => {
+    const types = [];
 
-    // Determine if the current context supports ReturnOrders
-    const supportsReturnOrders = useMemo(() => {
+    if (supportsBuildOrders) {
+      types.push({
+        value: 'build',
+        label: 'Build Orders'
+      });
+    }
 
-        // User must have permission to view return orders
-        if (!context?.user?.hasViewRole(UserRoles.return_order)) {
-            return false;
-        }
+    if (supportsPurchaseOrders) {
+      types.push({
+        value: 'purchase',
+        label: 'Purchase Orders'
+      });
+    }
 
-        // ReturnOrder history disabled for plugin
-        if (!pluginSettings.RETURN_ORDER_HISTORY) {
-            return false;
-        }
+    if (supportsSalesOrders) {
+      types.push({
+        value: 'sales',
+        label: 'Sales Orders'
+      });
+    }
 
-        switch (context.model) {
-            case 'partcategory':
-                return true;
-            case 'part':
-                return context.instance?.salable;
-            case 'company':
-                return context.instance?.is_customer;
-            case 'sales':
-                return true;
-            default:
-                return false;
-        }
+    if (supportsReturnOrders) {
+      types.push({
+        value: 'return',
+        label: 'Return Orders'
+      });
+    }
 
-    }, [context.user, context.instance, pluginSettings]);
+    return types;
+  }, [
+    supportsPurchaseOrders,
+    supportsSalesOrders,
+    supportsBuildOrders,
+    supportsReturnOrders
+  ]);
 
-    // Determine if current context supports BuildOrders
-    const supportsBuildOrders = useMemo(() => {
+  const [orderType, setOrderType] = useState<string | null>(null);
 
-        // User must have permission to view build orders
-        if (!context?.user?.hasViewRole(UserRoles.build)) {
-            return false;
-        }
+  // Ensure that the selected order type is valid for the current context
+  useEffect(() => {
+    if (!validOrderTypes.find((type: any) => type.value == orderType)) {
+      setOrderType(validOrderTypes[0]?.value ?? null);
+    }
+  }, [orderType, validOrderTypes]);
 
-        // BuildOrder history disabled for plugin
-        if (!pluginSettings.BUILD_ORDER_HISTORY) {
-            return false;
-        }
-
-        switch (context.model) {
-            case 'partcategory':
-                return true;
-            case 'part':
-                return context.instance?.assembly;
-            case 'manufacturing':
-                return true;
-            default:
-                return false;
-        }
-
-    }, [context.user, context.instance, pluginSettings]);
-
-    // Determine which "types" of orders are valid for the current context
-    const validOrderTypes = useMemo(() => {
-
-        const types = [];
-
-        if (supportsBuildOrders) {
-            types.push({
-                value: 'build',
-                label: 'Build Orders'
-            });
-        }
-
-        if (supportsPurchaseOrders) {
-            types.push({
-                value: 'purchase',
-                label: 'Purchase Orders'
-            });
-        }
-
-        if (supportsSalesOrders) {
-            types.push({
-                value: 'sales',
-                label: 'Sales Orders'
-            });
-        }
-
-        if (supportsReturnOrders) {
-            types.push({
-                value: 'return',
-                label: 'Return Orders'
-            });
-        }
-
-        return types;
-    }, [
-        supportsPurchaseOrders,
-        supportsSalesOrders,
-        supportsBuildOrders,
-        supportsReturnOrders
-    ]);
-
-    const [ orderType, setOrderType ] = useState<string | null>(null);
-
-    // Ensure that the selected order type is valid for the current context
-    useEffect(() => {
-        if (!validOrderTypes.find((type: any) => type.value == orderType)) {
-            setOrderType(validOrderTypes[0]?.value ?? null);
-        }
-    }, [orderType, validOrderTypes]);
-
-    // Memoize the query parameters based on the current context
-    const queryParams: any = useMemo(() => {
-        return {
-            start_date: dayjs(startDate).format('YYYY-MM-DD'),
-            end_date: dayjs(endDate).format('YYYY-MM-DD'),
-            period: period,
+  // Memoize the query parameters based on the current context
+  const queryParams: any = useMemo(() => {
+    return {
+      start_date: dayjs(startDate).format('YYYY-MM-DD'),
+      end_date: dayjs(endDate).format('YYYY-MM-DD'),
+      period: period,
             partcategory: context.model == 'partcategory' ? context.id : undefined,
-            part: context.model == 'part' ? context.id : undefined,
-            company: context.model == 'company' ? context.id : undefined,
-            supplier_part: context.model == 'supplierpart' ? context.id : undefined,
-            order_type: orderType
-        };
-    }, [
+      part: context.model == 'part' ? context.id : undefined,
+      company: context.model == 'company' ? context.id : undefined,
+      supplier_part: context.model == 'supplierpart' ? context.id : undefined,
+      order_type: orderType
+    };
+  }, [startDate, endDate, period, orderType, context.id, context.model]);
+
+  const historyQuery = useQuery(
+    {
+      enabled: !!orderType && !!startDate && !!endDate,
+      queryKey: [
+        'order-history',
         startDate,
         endDate,
         period,
         orderType,
         context.id,
-        context.model,
-    ])
-
-    const historyQuery = useQuery(
-        {
-            enabled: !!orderType && !!startDate && !!endDate,
-            queryKey: [
-                'order-history',
-                startDate,
-                endDate,
-                period,
-                orderType,
-                context.id,
-                context.model,
-            ],
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            queryFn: async () => {
-                return context.api?.get(`/${ORDER_HISTORY_URL}`, {
-                    params: queryParams,
-                }).then((response: any) => {
-                    return response.data;
-                }).catch(() => {
-                    return [];
-                }) ?? [];
-            }
-        },
-        queryClient
-    )
-
-    // Callback to download the order history data in a specific format
-    const downloadData = useCallback((fileFormat: string) => {
-
-        let url = `${ORDER_HISTORY_URL}?export=${fileFormat}`;
-
-        if (context.host) {
-            url = `${context.host}${url}`;
-        } else {
-            url = `${window.location.origin}/${url}`;
-        }
-
-        Object.keys(queryParams).forEach((key) => {
-            if (queryParams[key]) {
-                url += `&${key}=${queryParams[key]}`;
-            }
-        });
-
-        window.open(url, '_blank');
-
-    }, [context.host, queryParams]);
-
-    // Return a chart series for each history entry
-    const chartSeries: BarChartSeries[] = useMemo(() => {
+        context.model
+      ],
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      queryFn: async () => {
         return (
-            historyQuery.data?.map((item: any, index: number) => {
-                const part = item?.part ?? {};
-                const partId : number = part?.pk ?? index;
-                const partKey = `id_${partId.toString()}`;
-
-                return {
-                    name: partKey,
-                    label: part?.full_name ?? part?.name ?? part,
-                    color: COLOR_WHEEL[index % COLOR_WHEEL.length],
-                };
+          context.api
+            ?.get(`/${ORDER_HISTORY_URL}`, {
+              params: queryParams
+            })
+            .then((response: any) => {
+              return response.data;
+            })
+            .catch(() => {
+              return [];
             }) ?? []
         );
-    }, [historyQuery.data]);
+      }
+    },
+    queryClient
+  );
 
-    // Return chart data for each history entry
-    const chartData : any[] = useMemo(() => {
-        const data : any = {};
+  // Callback to download the order history data in a specific format
+  const downloadData = useCallback(
+    (fileFormat: string) => {
+      let url = `/${ORDER_HISTORY_URL}?export=${fileFormat}`;
 
-        historyQuery.data?.forEach((item: any, index: number) => {
-            const partId: number = item?.part?.pk ?? index;
-            const partKey = `id_${partId.toString()}`;
-            const entries: any[] = item?.history ?? [];
+      if (context.host) {
+        url = `${context.host}${url}`;
+      } else {
+        url = `${window.location.origin}/${url}`;
+      }
 
-            entries.forEach((entry: any) => {
-                // Find matching date entry in the data
-                const dateEntry = data[entry.date] || {};
+      Object.keys(queryParams).forEach((key) => {
+        if (queryParams[key]) {
+          url += `&${key}=${queryParams[key]}`;
+        }
+      });
 
-                // Add a dummy value to ensure that the date is included in the final data
-                dateEntry['_dummy'] = 0;
+      window.open(url, '_blank');
+    },
+    [context.host, queryParams]
+  );
 
-                // Only display non-zero entries
-                if (entry.quantity > 0) {
-                    dateEntry[partKey] = entry.quantity;
-                }
-
-                data[entry.date] = dateEntry;
-            });
-        });
-
-        // Sort the data by date
-        const sortedData = Object.keys(data).sort();
-
-        return sortedData.map((date: string) => {
-            return {
-                date: date,
-                ...data[date]
-            };
-        });
-
-    }, [historyQuery.data]);
-
-    const hasData = useMemo(() => chartData.length > 0 && chartSeries.length > 0, [chartData, chartSeries]);
-
+  // Return a chart series for each history entry
+  const chartSeries: BarChartSeries[] = useMemo(() => {
     return (
-        <>
-        <Paper withBorder p="sm" m="sm">
-        <Group gap="xs" justify='space-apart' grow>
-            <Group gap="xs">
-            <Select
-                data={validOrderTypes}
-                value={orderType}
-                onChange={(value: string | null) => {
-                    if (value) {
-                        setOrderType(value);
-                    }
-                }}
-                label={`Order Type`}
-            />
-            <MonthPickerInput
+      historyQuery.data?.map((item: any, index: number) => {
+        const part = item?.part ?? {};
+        const partId: number = part?.pk ?? index;
+        const partKey = `id_${partId.toString()}`;
+
+        return {
+          name: partKey,
+          label: part?.full_name ?? part?.name ?? part,
+          color: COLOR_WHEEL[index % COLOR_WHEEL.length]
+        };
+      }) ?? []
+    );
+  }, [historyQuery.data]);
+
+  // Return chart data for each history entry
+  const chartData: any[] = useMemo(() => {
+    const data: any = {};
+
+    historyQuery.data?.forEach((item: any, index: number) => {
+      const partId: number = item?.part?.pk ?? index;
+      const partKey = `id_${partId.toString()}`;
+      const entries: any[] = item?.history ?? [];
+
+      entries.forEach((entry: any) => {
+        // Find matching date entry in the data
+        const dateEntry = data[entry.date] || {};
+
+        // Add a dummy value to ensure that the date is included in the final data
+        dateEntry['_dummy'] = 0;
+
+        // Only display non-zero entries
+        if (entry.quantity > 0) {
+          dateEntry[partKey] = entry.quantity;
+        }
+
+        data[entry.date] = dateEntry;
+      });
+    });
+
+    // Sort the data by date
+    const sortedData = Object.keys(data).sort();
+
+    return sortedData.map((date: string) => {
+      return {
+        date: date,
+        ...data[date]
+      };
+    });
+  }, [historyQuery.data]);
+
+  const hasData = useMemo(
+    () => chartData.length > 0 && chartSeries.length > 0,
+    [chartData, chartSeries]
+  );
+
+  return (
+    <>
+      <Paper withBorder p='sm' m='sm'>
+        <Group gap='xs' justify='space-apart' grow>
+          <Select
+            data={validOrderTypes}
+            value={orderType}
+            onChange={(value: string | null) => {
+              if (value) {
+                setOrderType(value);
+              }
+            }}
+            label={`Order Type`}
+          />
+          <MonthPickerInput
             value={startDate}
             label={`Start Date`}
             onChange={(value: DateValue) => {
-                if (value && value < endDate) {
-                    setStartDate(value);
-                }
+              if (value && value < endDate) {
+                setStartDate(value);
+              }
             }}
-            />
-            <MonthPickerInput
+          />
+          <MonthPickerInput
             value={endDate}
             label={`End Date`}
             onChange={(value: DateValue) => {
-                if (value && value > startDate) {
-                    setEndDate(value);
-                }
+              if (value && value > startDate) {
+                setEndDate(value);
+              }
             }}
-            />
-            <Select 
-                data={[
-                    { value: 'M', label: `Monthly` },
-                    { value: 'Q', label: `Quarterly` },
-                    { value: 'Y', label: `Yearly` }
-                ]}
-                value={period}
-                onChange={(value: string | null) => {
-                    if (value) {
-                        setPeriod(value as OrderHistoryPeriod);
-                    }
-                }}
-                label={`Grouping Period`}
-            />
-            </Group>
-            <Group gap="xs" justify='flex-end'>
-                <Menu>
-                    <Menu.Target>
-                        <Button leftSection={<IconFileDownload />}>Export</Button>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                        <Menu.Item onClick={() => downloadData('csv')}>CSV</Menu.Item>
-                        <Menu.Item onClick={() => downloadData('xls')} >XLS</Menu.Item>
-                        <Menu.Item onClick={() => downloadData('xlsx')}>XLSX</Menu.Item>
-                    </Menu.Dropdown>
-                </Menu>
-            </Group>
-            </Group>
-            </Paper>
-        <Paper withBorder p="sm" m="sm">
-            <Box pos="relative">
-            <LoadingOverlay visible={historyQuery.isLoading || historyQuery.isFetching} />
-            {historyQuery.isError && (
-                <Alert color="red" title="Error Loading Data">
-                    <Text>Failed to load order history data from the server</Text>
-                </Alert>
-            )}
-            {(hasData || historyQuery.isLoading || historyQuery.isFetching) ? (
-                <Card>
-                <BarChart
-                    h={500}
-                    dataKey="date"
-                    type="stacked"
-                    data={chartData}
-                    series={chartSeries}
-                    />
-                </Card>
-            ) : (
-                <Alert color="blue" title="No Data Available" icon={<IconInfoCircle />}>
-                    <Text>No order history data found, based on the provided parameters</Text>
-                </Alert>
-            )}
-            </Box>
-        </Paper>
-        </>
-    );
+          />
+          <Select
+            data={[
+              { value: 'M', label: `Monthly` },
+              { value: 'Q', label: `Quarterly` },
+              { value: 'Y', label: `Yearly` }
+            ]}
+            value={period}
+            onChange={(value: string | null) => {
+              if (value) {
+                setPeriod(value as OrderHistoryPeriod);
+              }
+            }}
+            label={`Grouping Period`}
+          />
+          <Group gap='xs' justify='flex-end' align='bottom'>
+            <Menu>
+              <Menu.Target>
+                <Button leftSection={<IconFileDownload />}>Export</Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item onClick={() => downloadData('csv')}>CSV</Menu.Item>
+                <Menu.Item onClick={() => downloadData('xls')}>XLS</Menu.Item>
+                <Menu.Item onClick={() => downloadData('xlsx')}>XLSX</Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Group>
+      </Paper>
+      <Paper withBorder p='sm' m='sm'>
+        <Box pos='relative'>
+          <LoadingOverlay
+            visible={historyQuery.isLoading || historyQuery.isFetching}
+          />
+          {historyQuery.isError && (
+            <Alert color='red' title='Error Loading Data'>
+              <Text>Failed to load order history data from the server</Text>
+            </Alert>
+          )}
+          {hasData || historyQuery.isLoading || historyQuery.isFetching ? (
+            <Card>
+              <BarChart
+                h={500}
+                dataKey='date'
+                type='stacked'
+                data={chartData}
+                series={chartSeries}
+              />
+            </Card>
+          ) : (
+            <Alert
+              color='blue'
+              title='No Data Available'
+              icon={<IconInfoCircle />}
+            >
+              <Text>
+                No order history data found, based on the provided parameters
+              </Text>
+            </Alert>
+          )}
+        </Box>
+      </Paper>
+    </>
+  );
 }
-
 
 /**
  * Render the OrderHistoryPanel component
- * 
+ *
  * @param target - The target HTML element to render the panel into
  * @param context - The context object to pass to the panel
  */
 export function renderPanel(context: InvenTreePluginContext) {
-    initPlugin(context);
-    return (
-        <OrderHistoryPanel context={context}/>
-    );
+  initPlugin(context);
+  return <OrderHistoryPanel context={context} />;
 }

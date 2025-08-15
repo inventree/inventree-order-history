@@ -20,24 +20,26 @@ class HistoryView(APIView):
     """View for generating order history data."""
 
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get(self, request):
         """Generate order history data based on the provided parameters."""
 
-        serializer = serializers.OrderHistoryRequestSerializer(data=request.query_params)
+        serializer = serializers.OrderHistoryRequestSerializer(
+            data=request.query_params
+        )
         serializer.is_valid(raise_exception=True)
 
         data = cast(dict, serializer.validated_data)
 
-        self.start_date = data.get('start_date')
-        self.end_date = data.get('end_date')
-        self.period = data.get('period', 'M')
-        self.order_type = data.get('order_type')
-        self.part = data.get('part')
-        self.category = data.get('category')
-        self.company = data.get('company')
-        self.supplier_part = data.get('supplier_part')
-        self.export_format = data.get('export')
+        self.start_date = data.get("start_date")
+        self.end_date = data.get("end_date")
+        self.period = data.get("period", "M")
+        self.order_type = data.get("order_type")
+        self.part = data.get("part")
+        self.partcategory = data.get("partcategory")
+        self.company = data.get("company")
+        self.supplier_part = data.get("supplier_part")
+        self.export_format = data.get("export")
 
         # Construct the date range
         self.date_range = helpers.construct_date_range(
@@ -46,10 +48,10 @@ class HistoryView(APIView):
 
         # Generate order history based on the provided parameters
         generators = {
-            'build': self.generate_build_order_history,
-            'purchase': self.generate_purchase_order_history,
-            'sales': self.generate_sales_order_history,
-            'return': self.generate_return_order_history,
+            "build": self.generate_build_order_history,
+            "purchase": self.generate_purchase_order_history,
+            "sales": self.generate_sales_order_history,
+            "return": self.generate_return_order_history,
         }
 
         if self.order_type in generators:
@@ -69,20 +71,16 @@ class HistoryView(APIView):
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             builds = builds.filter(part__in=parts)
-        
-        builds = builds.filter(
-            status__in=BuildStatusGroups.COMPLETE,
-            completed__gt=0
-        ).prefetch_related(
-            'part'
-        ).select_related(
-            'part__pricing_data'
+
+        builds = (
+            builds.filter(status__in=BuildStatusGroups.COMPLETE, completed__gt=0)
+            .prefetch_related("part")
+            .select_related("part__pricing_data")
         )
 
         # Exclude orders which do not have a completion date, and filter by date range
         builds = builds.exclude(completion_date=None).filter(
-            completion_date__gte=self.start_date,
-            completion_date__lte=self.end_date
+            completion_date__gte=self.start_date, completion_date__lte=self.end_date
         )
 
         # Exclude builds which have no completed stock
@@ -112,7 +110,7 @@ class HistoryView(APIView):
 
             history_items[part.pk][date_key] += build.completed
 
-        return self.format_response(parts, history_items, 'build')
+        return self.format_response(parts, history_items, "build")
 
     def generate_purchase_order_history(self):
         """Generate purchase order history data."""
@@ -120,13 +118,12 @@ class HistoryView(APIView):
         from order.models import PurchaseOrderLineItem
         from order.status_codes import PurchaseOrderStatusGroups
 
-        lines = PurchaseOrderLineItem.objects.filter(
-            order__status__in=PurchaseOrderStatusGroups.COMPLETE,
-            received__gt=0
-        ).prefetch_related(
-            'part', 'part__part', 'order'
-        ).select_related(
-            'part__part__pricing_data'
+        lines = (
+            PurchaseOrderLineItem.objects.filter(
+                order__status__in=PurchaseOrderStatusGroups.COMPLETE, received__gt=0
+            )
+            .prefetch_related("part", "part__part", "order")
+            .select_related("part__part__pricing_data")
         )
 
         # Filter by part
@@ -147,9 +144,9 @@ class HistoryView(APIView):
         # Filter by date range
         lines = lines.exclude(order__complete_date=None).filter(
             order__complete_date__gte=self.start_date,
-            order__complete_date__lte=self.end_date
+            order__complete_date__lte=self.end_date,
         )
-        
+
         # Exclude any lines which do not map to an internal part
         lines = lines.exclude(part__part=None)
 
@@ -161,7 +158,6 @@ class HistoryView(APIView):
         parts = {}
 
         for line in lines:
-
             if not line.part or not line.part.part:
                 # Skip lines which do not map to a part (may have been deleted, for example)
                 continue
@@ -181,21 +177,23 @@ class HistoryView(APIView):
             part_history[date_key] = date_entry
             history_items[part.pk] = part_history
 
-        return self.format_response(parts, history_items, 'purchase')
+        return self.format_response(parts, history_items, "purchase")
 
     def generate_sales_order_history(self):
-        """Generate sales order history data."""
+        """Generate sales order history data.
 
-        from order.models import SalesOrderLineItem
-        from order.status_codes import SalesOrderStatusGroups
+        - We need to account for the possibility of split-shipments
+        """
 
-        lines = SalesOrderLineItem.objects.filter(
-            order__status__in=SalesOrderStatusGroups.COMPLETE,
-            shipped__gt=0
-        ).prefetch_related(
-            'part', 'order', 'allocations'
-        ).select_related(
-            'part__pricing_data'
+        from order.models import (
+            SalesOrderAllocation,
+            SalesOrderLineItem,
+        )
+
+        lines = (
+            SalesOrderLineItem.objects.filter(shipped__gt=0)
+            .prefetch_related("part", "order", "allocations")
+            .select_related("part__pricing_data")
         )
 
         # Filter by part
@@ -207,22 +205,37 @@ class HistoryView(APIView):
         if self.company:
             lines = lines.filter(order__customer=self.company)
 
-        # TODO: Account for order lines which have been shipped but not yet completed
-
-        # Filter by date range
-        lines = lines.exclude(order__shipment_date=None).filter(
-            order__shipment_date__gte=self.start_date,
-            order__shipment_date__lte=self.end_date
+        # Find all "allocations" for shipments which have actually shipped
+        # This will tell us when the individual line items were sent out
+        allocations = (
+            SalesOrderAllocation.objects.filter(line__in=lines)
+            .exclude(shipment=None)
+            .exclude(shipment__shipment_date__isnull=True)
         )
 
-        # Exclude lines which have no shipped stock
-        lines = lines.exclude(shipped=0)
+        # Filter allocations by date range
+        allocations = allocations.filter(
+            shipment__shipment_date__gte=self.start_date,
+            shipment__shipment_date__lte=self.end_date,
+        )
+
+        # Prefetch related data
+        allocations = allocations.prefetch_related(
+            "shipment",
+            "shipment__order",
+            "line",
+            "line__part",
+            "line__part__pricing_data",
+        ).distinct()
 
         # Construct a dictionary of sales history data to part ID
         history_items = {}
         parts = {}
 
-        for line in lines:
+        for allocation in allocations:
+            line = allocation.line
+            shipment = allocation.shipment
+            quantity = allocation.quantity
             part = line.part
 
             if not part:
@@ -235,35 +248,35 @@ class HistoryView(APIView):
             if part.pk not in parts:
                 parts[part.pk] = part
 
-            date_key = helpers.convert_date(line.order.shipment_date, self.period)
+            date_key = helpers.convert_date(shipment.shipment_date, self.period)
             date_entry = part_history.get(date_key, 0)
-            date_entry += line.shipped
+            date_entry += quantity
 
             # Save data back into the dictionary
             part_history[date_key] = date_entry
             history_items[part.pk] = part_history
 
-        return self.format_response(parts, history_items, 'sales')
-    
+        return self.format_response(parts, history_items, "sales")
+
     def generate_return_order_history(self):
         """Generate return order history data."""
 
         from order.models import ReturnOrderLineItem
         from order.status_codes import ReturnOrderStatusGroups
 
-        lines = ReturnOrderLineItem.objects.filter(
-            order__status__in=ReturnOrderStatusGroups.COMPLETE,
-        ).prefetch_related(
-            'item', 'item__part', 'order'
-        ).select_related(
-            'item__part__pricing_data'
+        lines = (
+            ReturnOrderLineItem.objects.filter(
+                order__status__in=ReturnOrderStatusGroups.COMPLETE,
+            )
+            .prefetch_related("item", "item__part", "order")
+            .select_related("item__part__pricing_data")
         )
 
         # Filter by part
         if self.part:
             parts = self.part.get_descendants(include_self=True)
             lines = lines.filter(item__part__in=parts)
-        
+
         # Filter by customer
         if self.company:
             lines = lines.filter(order__customer=self.company)
@@ -273,7 +286,7 @@ class HistoryView(APIView):
         # Filter by date range
         lines = lines.exclude(order__complete_date=None).filter(
             order__complete_date__gte=self.start_date,
-            order__complete_date__lte=self.end_date
+            order__complete_date__lte=self.end_date,
         )
 
         history_items = {}
@@ -300,11 +313,13 @@ class HistoryView(APIView):
             part_history[date_key] = date_entry
             history_items[part.pk] = part_history
 
-        return self.format_response(parts, history_items, 'return')
-    
-    def format_response(self, part_dict: dict, history_items: dict, order_type: str) -> Response:
+        return self.format_response(parts, history_items, "return")
+
+    def format_response(
+        self, part_dict: dict, history_items: dict, order_type: str
+    ) -> Response:
         """Format the response data for the order history.
-        
+
         Arguments:
             - part_dict: A dictionary of parts
             - history_items: A dictionary of history items
@@ -318,23 +333,20 @@ class HistoryView(APIView):
 
         for part_id, entries in history_items.items():
             history = [
-                {'date': date_key, 'quantity': quantity}
+                {"date": date_key, "quantity": quantity}
                 for date_key, quantity in entries.items()
             ]
 
             # Ensure that all date keys are present
             for date_key in self.date_range:
                 if date_key not in entries:
-                    history.append({'date': date_key, 'quantity': 0})
+                    history.append({"date": date_key, "quantity": 0})
 
-            history = sorted(history, key=lambda x: x['date'])
-            
+            history = sorted(history, key=lambda x: x["date"])
+
             # Construct an entry for each part
-            response.append({
-                'part': part_dict[part_id],
-                'history': history
-            })
-        
+            response.append({"part": part_dict[part_id], "history": history})
+
         return Response(
             serializers.OrderHistoryResponseSerializer(response, many=True).data
         )
@@ -343,7 +355,7 @@ class HistoryView(APIView):
         """Export the data in the requested format."""
 
         # Construct the set of headers
-        headers = [_('Part ID'), _('Part Name'), _('IPN'), *self.date_range]
+        headers = [_("Part ID"), _("Part Name"), _("IPN"), *self.date_range]
 
         dataset = tablib.Dataset(headers=map(str, headers))
 
@@ -359,4 +371,6 @@ class HistoryView(APIView):
 
         data = dataset.export(self.export_format)
 
-        return DownloadFile(data, filename=f'InvenTree_{order_type}_order_history.{self.export_format}')
+        return DownloadFile(
+            data, filename=f"InvenTree_{order_type}_order_history.{self.export_format}"
+        )
