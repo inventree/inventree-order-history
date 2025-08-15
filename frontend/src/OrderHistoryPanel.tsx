@@ -328,7 +328,6 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
         <>
         <Paper withBorder p="sm" m="sm">
         <Group gap="xs" justify='space-apart' grow>
-            <Group gap="xs">
             <Select
                 data={validOrderTypes}
                 value={orderType}
@@ -371,8 +370,7 @@ function OrderHistoryPanel({context}: {context: InvenTreePluginContext}) {
                 }}
                 label={`Grouping Period`}
             />
-            </Group>
-            <Group gap="xs" justify='flex-end'>
+            <Group gap="xs" justify='flex-end' align='bottom'>
                 <Menu>
                     <Menu.Target>
                         <Button leftSection={<IconFileDownload />}>Export</Button>
