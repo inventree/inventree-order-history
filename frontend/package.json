@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@inventreedb/ui": "latest",
-    "dayjs": "^1.11.13"
+    "dayjs": "^1.11.13",
+    "react": ">=19.1.1",
+    "react-dom": ">=19.1.1"
   },
   "peerDependencies": {},
   "devDependencies": {
@@ -20,7 +22,7 @@
     "@lingui/macro": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^4.7.0",
     "globals": "^15.14.0",
     "typescript": "~5.6.2",
     "vite": "^6.0.5",
