@@ -1,6 +1,6 @@
 import {
   type InvenTreePluginContext,
-  initPlugin,
+  checkPluginVersion,
   UserRoles
 } from '@inventreedb/ui';
 import { BarChart, type BarChartSeries } from '@mantine/charts';
@@ -446,6 +446,7 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
  * @param context - The context object to pass to the panel
  */
 export function renderPanel(context: InvenTreePluginContext) {
-  initPlugin(context);
+  checkPluginVersion(context);
+
   return <OrderHistoryPanel context={context} />;
 }
