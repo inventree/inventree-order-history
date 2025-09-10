@@ -47,4 +47,9 @@ setuptools.setup(
             "OrderHistoryPlugin = order_history.core:OrderHistoryPlugin"
         ]
     },
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+        "Framework :: InvenTree",
+    ],
 )
