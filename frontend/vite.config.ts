@@ -28,20 +28,29 @@ export default defineConfig({
     viteExternalsPlugin(externalLibs),
   ],
   build: {
-    // minify: false,
+    minify: true,
     cssCodeSplit: false,
-    manifest: false,
+    manifest: true,
+    sourcemap: true,
     rollupOptions: {
       preserveEntrySignatures: "exports-only",
       input: [
         './src/OrderHistoryPanel.tsx',
       ],
-      output: {
-        dir: '../order_history/static',
-        entryFileNames: '[name].js',
-        assetFileNames: 'assets/[name].[ext]',
-        globals: externalLibs
-      },
+      output: [
+        {
+          dir: '../order_history/static',
+          entryFileNames: '[name].js',
+          assetFileNames: 'assets/[name].[ext]',
+          globals: externalLibs
+        },
+        {
+          dir: '../order_history/static',
+          entryFileNames: '[name]-[hash].min.js',
+          assetFileNames: 'assets/[name].[ext]',
+          globals: externalLibs
+        },
+      ],
       external: externalKeys
     }
   },
