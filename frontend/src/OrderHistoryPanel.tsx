@@ -361,7 +361,7 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
             label={`Start Date`}
             onChange={(value: DateValue) => {
               if (value && value < endDate) {
-                setStartDate(value);
+                setStartDate(new Date(value));
               }
             }}
           />
@@ -370,7 +370,7 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
             label={`End Date`}
             onChange={(value: DateValue) => {
               if (value && value > startDate) {
-                setEndDate(value);
+                setEndDate(new Date(value));
               }
             }}
           />
@@ -445,7 +445,7 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
  * @param target - The target HTML element to render the panel into
  * @param context - The context object to pass to the panel
  */
-export function renderPanel(context: InvenTreePluginContext) {
+export function RenderPanel(context: InvenTreePluginContext) {
   checkPluginVersion(context);
 
   return <OrderHistoryPanel context={context} />;
