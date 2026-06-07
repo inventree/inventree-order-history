@@ -63,9 +63,10 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
         """Returns the URLs defined by this plugin."""
 
         from django.urls import path
-        from .views import HistoryView
+        from .views import DashboardView, HistoryView
 
         return [
+            path('dashboard/', DashboardView.as_view(), name='order-history-dashboard'),
             path('history/', HistoryView.as_view(), name='order-history'),
         ]
 

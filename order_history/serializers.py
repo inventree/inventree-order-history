@@ -87,3 +87,25 @@ class OrderHistoryResponseSerializer(serializers.Serializer):
 
     part = PartBriefSerializer(read_only=True, many=False)
     history = OrderHistoryItemSerializer(many=True, read_only=True)
+
+
+class DashboardRequestSerializer(serializers.Serializer):
+    """Serializer for requesting dashboard data from the OrderHistory plugin."""
+
+    class Meta:
+        fields = ['model_type']
+
+    model_type = serializers.ChoiceField(
+        label=_('Model Type'),
+        choices=[('build', _('Build Order')), ('purchaseorder', _('Purchase Order')), ('salesorder', _('Sales Order')), ('returnorder', _('Return Order'))],
+        help_text=_('Filter order data by this type'),
+    )
+
+
+class DashboardResponseSerializer(serializers.Serializer):
+    """Serializer for returning dashboard data from the OrderHistory plugin."""
+
+    class Meta:
+        fields = ['history']
+
+    history = OrderHistoryItemSerializer(many=True, read_only=True)
