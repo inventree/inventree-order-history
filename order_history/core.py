@@ -15,7 +15,7 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
     DESCRIPTION = "Order history plugin for InvenTree"
     VERSION = PLUGIN_VERSION
 
-    MIN_VERSION = '0.17.0'
+    MIN_VERSION = '1.0.0'
 
     NAME = "Order History"
     SLUG = "order_history"
