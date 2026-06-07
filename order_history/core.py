@@ -160,7 +160,7 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
                 'description': 'View order history for this part',
                 'icon': 'ti:history:outline',
                 'source': self.plugin_static_file(
-                    'OrderHistoryPanel.js:renderPanel'
+                    'OrderHistoryPanel.js:RenderPanel'
                 ),
                 'context': {
                     'settings': self.plugin_settings,
