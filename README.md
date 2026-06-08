@@ -51,6 +51,23 @@ The plugin can be configured via the InvenTree plugin interface. The following s
 
 ![Plugin Settings](docs/img/settings.png)
 
+## Dashboard Widgets
+
+The plugin provides four custom dashboard widgets, each displaying a bar chart of completed orders per month for the rolling 12-month window. Widgets are added from the InvenTree dashboard by clicking *Add Widget*:
+
+| Widget | Description |
+| --- | --- |
+| Build Order History | Completed build orders per month |
+| Purchase Order History | Completed purchase orders per month |
+| Sales Order History | Completed sales orders per month |
+| Return Order History | Completed return orders per month |
+
+Each widget only appears if the corresponding order type is enabled in the plugin settings (e.g. *Build Order History* must be enabled for the build order widget to be available). If a *User Group* is configured, only members of that group will see any of the widgets.
+
+Months with no completed orders are shown as zero rather than being omitted, giving a consistent 12-bar view.
+
+![Dashboard Widgets](docs/img/dashboard_item.png)
+
 ## Contributing
 
 ### Backend
