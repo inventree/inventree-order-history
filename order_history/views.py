@@ -121,9 +121,9 @@ class DashboardView(APIView):
             status__in=SalesOrderStatusGroups.COMPLETE,
         ).prefetch_related("customer")
 
-        orders = self.filter_by_period(orders)
+        orders = self.filter_by_period(orders, date_field='shipment_date')
 
-        return self.group_by_month(orders)
+        return self.group_by_month(orders, date_field='shipment_date')
 
     def get_return_orders(self):
         """Fetch return order data for dashboard widget."""
