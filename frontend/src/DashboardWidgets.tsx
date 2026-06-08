@@ -66,7 +66,7 @@ function OrderHistoryComponent({
       <Box>
         <LoadingOverlay visible={query.isLoading || query.isFetching} />
         <BarChart
-          h={150}
+          h={75}
           data={chartData}
           dataKey='month'
           series={[{ name: 'quantity', label: 'Completed', color: 'blue.6' }]}
