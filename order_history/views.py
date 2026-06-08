@@ -1,6 +1,10 @@
 """API views for the Order History plugin."""
 
+import datetime
 from typing import cast
+
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 
 import tablib
 
@@ -10,10 +14,129 @@ from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework.views import APIView
 
-from InvenTree.helpers import DownloadFile
+from InvenTree.helpers import current_date, DownloadFile
 
 from . import helpers
 from . import serializers
+
+
+class DashboardView(APIView):
+    """API endpoint for fetching simple order aggregations."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = serializers.DashboardRequestSerializer
+
+    def get(self, request):
+        """Fetch aggregated order data for dashboard widgets."""
+
+        serializer = serializers.DashboardRequestSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
+        data = cast(dict, serializer.validated_data)
+
+        model_type = data.get("model_type", None)
+
+        # Generate order history based on the provided parameters
+        generators = {
+            "build": self.get_build_orders,
+            "purchaseorder": self.get_purchase_orders,
+            "salesorder": self.get_sales_orders,
+            "returnorder": self.get_return_orders,
+        }
+
+        # No valid order type provided
+        if model_type not in generators:
+            return Response({"history": []})
+
+        orders = generators[model_type]()
+
+        return Response(
+            serializers.DashboardResponseSerializer({"history": orders}).data
+        )
+
+    def filter_by_period(self, queryset, date_field: str = "complete_date"):
+        """Filter a queryset by the selected date range."""
+
+        end_date = current_date()
+        start_date = end_date - datetime.timedelta(days=365)
+
+        filter_kwargs = {
+            f"{date_field}__gte": start_date,
+            f"{date_field}__lte": end_date,
+        }
+
+        return queryset.filter(**filter_kwargs).order_by(date_field)
+
+    def group_by_month(self, queryset, date_field: str = "complete_date"):
+        """Group a queryset by month, based on the provided date field."""
+
+        results = (
+            queryset.annotate(month=TruncMonth(date_field))
+            .values("month")
+            .annotate(count=Count("pk"))
+            .order_by("month")
+        )
+
+        return [
+            {"date": entry["month"].strftime("%Y-%m"), "quantity": entry["count"]}
+            for entry in results
+        ]
+
+    def get_build_orders(self):
+        """Fetch build order data for dashboard widget."""
+
+        from build.models import Build
+        from build.status_codes import BuildStatusGroups
+
+        builds = Build.objects.filter(
+            status__in=BuildStatusGroups.COMPLETE
+        ).prefetch_related("part")
+
+        builds = self.filter_by_period(builds, date_field="completion_date")
+
+        return self.group_by_month(builds, date_field="completion_date")
+
+    def get_purchase_orders(self):
+        """Fetch purchase order data for dashboard widget."""
+
+        from order.models import PurchaseOrder
+        from order.status_codes import PurchaseOrderStatusGroups
+
+        orders = PurchaseOrder.objects.filter(
+            status__in=PurchaseOrderStatusGroups.COMPLETE,
+        ).prefetch_related("supplier")
+
+        orders = self.filter_by_period(orders)
+
+        return self.group_by_month(orders)
+
+    def get_sales_orders(self):
+        """Fetch sales order data for dashboard widget."""
+
+        from order.models import SalesOrder
+        from order.status_codes import SalesOrderStatusGroups
+
+        orders = SalesOrder.objects.filter(
+            status__in=SalesOrderStatusGroups.COMPLETE,
+        ).prefetch_related("customer")
+
+        orders = self.filter_by_period(orders, date_field="shipment_date")
+
+        return self.group_by_month(orders, date_field="shipment_date")
+
+    def get_return_orders(self):
+        """Fetch return order data for dashboard widget."""
+
+        from order.models import ReturnOrder
+        from order.status_codes import ReturnOrderStatusGroups
+
+        orders = ReturnOrder.objects.filter(
+            status__in=ReturnOrderStatusGroups.COMPLETE,
+        ).prefetch_related("customer")
+
+        orders = self.filter_by_period(orders)
+
+        return self.group_by_month(orders)
 
 
 class HistoryView(APIView):
