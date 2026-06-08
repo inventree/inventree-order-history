@@ -10,8 +10,6 @@ export const externalLibs : Record<string, string> = {
   react: 'React',
   'react-dom': 'ReactDOM',
   'ReactDom': 'ReactDOM',
-  '@lingui/core': 'LinguiCore',
-  '@lingui/react': 'LinguiReact',
   '@mantine/core': 'MantineCore',
   "@mantine/notifications": 'MantineNotifications',
 };
@@ -35,6 +33,7 @@ export default defineConfig({
     rollupOptions: {
       preserveEntrySignatures: "exports-only",
       input: [
+        './src/DashboardWidgets.tsx',
         './src/OrderHistoryPanel.tsx',
       ],
       output: [

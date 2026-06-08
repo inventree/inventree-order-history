@@ -1,5 +1,7 @@
 """Order history plugin for InvenTree."""
 
+from django.utils.translation import gettext_lazy as _
+
 from company.models import Company
 from part.models import Part
 from plugin import InvenTreePlugin
@@ -168,3 +170,63 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
                 }
             }
         ]
+
+    def get_ui_dashboard_items(self, request, context, **kwargs):
+        """Return a list of custom dashboard items."""
+
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return []
+
+        # Cache the settings for this plugin
+        self.plugin_settings = self.get_settings_dict()
+
+        # Check that the user is part of the allowed group
+        if group := self.plugin_settings.get('USER_GROUP'):
+            if not user.groups.filter(pk=group).exists():
+                return []
+
+        items = []
+
+        # Only display the dashboard item if at least one type of order history is enabled
+        if not (self.plugin_settings.get('BUILD_ORDER_HISTORY') or self.plugin_settings.get('PURCHASE_ORDER_HISTORY') or self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
+            return []
+
+        items.append({
+            'key': 'order-history-bo',
+            'title': _('Build Order History'),
+            'description': _('View summary of completed build orders over the last 12 months'),
+            'source': self.plugin_static_file(
+                'DashboardWidgets.js:BuildOrderSummaryWidget'
+            ),
+        })
+
+        items.append({
+            'key': 'order-history-po',
+            'title': _('Purchase Order History'),
+            'description': _('View summary of completed purchase orders over the last 12 months'),
+            'source': self.plugin_static_file(
+                'DashboardWidgets.js:PurchaseOrderSummaryWidget'
+            ),
+        })
+
+        items.append({
+            'key': 'order-history-so',
+            'title': _('Sales Order History'),
+            'description': _('View summary of completed sales orders over the last 12 months'),
+            'source': self.plugin_static_file(
+                'DashboardWidgets.js:SalesOrderSummaryWidget'
+            ),
+        })
+
+        items.append({
+            'key': 'order-history-ro',
+            'title': _('Return Order History'),
+            'description': _('View summary of completed return orders over the last 12 months'),
+            'source': self.plugin_static_file(
+                'DashboardWidgets.js:ReturnOrderSummaryWidget'
+            ),
+        })
+
+        return items
