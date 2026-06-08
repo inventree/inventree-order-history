@@ -1,7 +1,8 @@
 
 import { InvenTreePluginContext, ModelType, StylishText } from '@inventreedb/ui';
 import { BarChart } from '@mantine/charts';
-import { Box, LoadingOverlay, Stack } from '@mantine/core';
+import { ActionIcon, Box, Group, LoadingOverlay, Stack } from '@mantine/core';
+import { IconExclamationCircle } from '@tabler/icons-react';
 import { useDocumentVisibility } from '@mantine/hooks';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -58,15 +59,19 @@ function OrderHistoryComponent({
 
   return (
     <Stack gap='xs'>
-      <StylishText size='md'>{title}</StylishText>
+      <Group>
+        {query.isError && <ActionIcon color='red' variant='transparent' size='sm'><IconExclamationCircle /></ActionIcon>}
+        <StylishText size='md'>{title}</StylishText>
+      </Group>
       <Box>
         <LoadingOverlay visible={query.isLoading || query.isFetching} />
         <BarChart
-          h={200}
+          h={150}
           data={chartData}
           dataKey='month'
           series={[{ name: 'quantity', label: 'Completed', color: 'blue.6' }]}
           withYAxis={false}
+          withXAxis={false}
           yAxisProps={{ domain: [0, 'auto'] }}
         />
       </Box>
@@ -76,9 +81,6 @@ function OrderHistoryComponent({
 
 
 export function BuildOrderSummaryWidget(context: InvenTreePluginContext) {
-
-  console.log("CONTEXT:", context);
-
   return <OrderHistoryComponent modelType={ModelType.build} context={context} />;
 }
 
