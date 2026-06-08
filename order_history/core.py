@@ -6,6 +6,8 @@ from company.models import Company
 from part.models import Part
 from plugin import InvenTreePlugin
 from plugin.mixins import SettingsMixin, UrlsMixin, UserInterfaceMixin
+from users.permissions import check_user_role
+from users.ruleset import RuleSetEnum
 
 from .version import PLUGIN_VERSION
 
@@ -17,48 +19,48 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
     DESCRIPTION = "Order history plugin for InvenTree"
     VERSION = PLUGIN_VERSION
 
-    MIN_VERSION = '1.0.0'
+    MIN_VERSION = "1.0.0"
 
     NAME = "Order History"
     SLUG = "order_history"
     TITLE = "Order History Plugin"
 
     SETTINGS = {
-        'BUILD_ORDER_HISTORY': {
-            'name': 'Build Order History',
-            'description': 'Enable build order history tracking',
-            'default': True,
-            'validator': bool,
+        "BUILD_ORDER_HISTORY": {
+            "name": "Build Order History",
+            "description": "Enable build order history tracking",
+            "default": True,
+            "validator": bool,
         },
-        'PURCHASE_ORDER_HISTORY': {
-            'name': 'Purchase Order History',
-            'description': 'Enable purchase order history tracking',
-            'default': True,
-            'validator': bool,
+        "PURCHASE_ORDER_HISTORY": {
+            "name": "Purchase Order History",
+            "description": "Enable purchase order history tracking",
+            "default": True,
+            "validator": bool,
         },
-        'SALES_ORDER_HISTORY': {
-            'name': 'Sales Order History',
-            'description': 'Enable sales order history tracking',
-            'default': True,
-            'validator': bool,
+        "SALES_ORDER_HISTORY": {
+            "name": "Sales Order History",
+            "description": "Enable sales order history tracking",
+            "default": True,
+            "validator": bool,
         },
-        'RETURN_ORDER_HISTORY': {
-            'name': 'Return Order History',
-            'description': 'Enable return order history tracking',
-            'default': True,
-            'validator': bool,
+        "RETURN_ORDER_HISTORY": {
+            "name": "Return Order History",
+            "description": "Enable return order history tracking",
+            "default": True,
+            "validator": bool,
         },
-        'CATEGORY_HISTORY': {
-            'name': 'Category History',
-            'description': 'Enable order history panel for part category views',
-            'default': False,
-            'validator': bool,
+        "CATEGORY_HISTORY": {
+            "name": "Category History",
+            "description": "Enable order history panel for part category views",
+            "default": False,
+            "validator": bool,
         },
-        'USER_GROUP': {
-            'name': 'Allowed Group',
-            'description': 'The user group that is allowed to view order history',
-            'model': 'auth.group',
-        }
+        "USER_GROUP": {
+            "name": "Allowed Group",
+            "description": "The user group that is allowed to view order history",
+            "model": "auth.group",
+        },
     }
 
     def setup_urls(self):
@@ -68,61 +70,73 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
         from .views import DashboardView, HistoryView
 
         return [
-            path('dashboard/', DashboardView.as_view(), name='order-history-dashboard'),
-            path('history/', HistoryView.as_view(), name='order-history'),
+            path("dashboard/", DashboardView.as_view(), name="order-history-dashboard"),
+            path("history/", HistoryView.as_view(), name="order-history"),
         ]
 
     def is_panel_visible(self, target: str, pk: int) -> bool:
         """Determines whether the order history panel should be visible."""
 
         # Display for the 'build index' page
-        if target == 'manufacturing':
-            return self.plugin_settings.get('BUILD_ORDER_HISTORY')
+        if target == "manufacturing":
+            return self.plugin_settings.get("BUILD_ORDER_HISTORY")
 
         # Display for the 'purchase order index' page
-        if target == 'purchasing':
-            return self.plugin_settings.get('PURCHASE_ORDER_HISTORY')
+        if target == "purchasing":
+            return self.plugin_settings.get("PURCHASE_ORDER_HISTORY")
 
         # Display for a 'supplierpart' object
-        if target == 'supplierpart':
-            return self.plugin_settings.get('PURCHASE_ORDER_HISTORY')
+        if target == "supplierpart":
+            return self.plugin_settings.get("PURCHASE_ORDER_HISTORY")
 
         # Display for the 'sales' page
-        if target == 'sales':
-            return self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')
+        if target == "sales":
+            return self.plugin_settings.get(
+                "SALES_ORDER_HISTORY"
+            ) or self.plugin_settings.get("RETURN_ORDER_HISTORY")
 
         # Display for a particular company
-        if target == 'company':
+        if target == "company":
             try:
                 company = Company.objects.get(pk=pk)
 
-                if company.is_supplier and self.plugin_settings.get('PURCHASE_ORDER_HISTORY'):
+                if company.is_supplier and self.plugin_settings.get(
+                    "PURCHASE_ORDER_HISTORY"
+                ):
                     return True
-                
-                if company.is_customer and (self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
+
+                if company.is_customer and (
+                    self.plugin_settings.get("SALES_ORDER_HISTORY")
+                    or self.plugin_settings.get("RETURN_ORDER_HISTORY")
+                ):
                     return True
-                
+
                 return False
 
             except Exception:
                 return False
 
         # Display for a part category
-        if target == 'partcategory' and self.get_setting('CATEGORY_HISTORY'):
+        if target == "partcategory" and self.get_setting("CATEGORY_HISTORY"):
             return True
 
         # Display for a particular part
-        if target == 'part':
+        if target == "part":
             try:
                 part = Part.objects.get(pk=pk)
 
-                if part.assembly and self.plugin_settings.get('BUILD_ORDER_HISTORY'):
+                if part.assembly and self.plugin_settings.get("BUILD_ORDER_HISTORY"):
                     return True
-                
-                if part.purchaseable and self.plugin_settings.get('PURCHASE_ORDER_HISTORY'):
+
+                if part.purchaseable and self.plugin_settings.get(
+                    "PURCHASE_ORDER_HISTORY"
+                ):
                     return True
-                
-                if part.salable and (self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
+
+                if part.salable and (
+                    self.plugin_settings.get("SALES_ORDER_HISTORY")
+                    or self.plugin_settings.get("RETURN_ORDER_HISTORY")
+                ):
                     return True
 
                 return False
@@ -140,17 +154,17 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
 
         if not user or not user.is_authenticated:
             return []
-        
+
         # Cache the settings for this plugin
         self.plugin_settings = self.get_settings_dict()
 
         # Check that the user is part of the allowed group
-        if group := self.plugin_settings.get('USER_GROUP'):
+        if group := self.plugin_settings.get("USER_GROUP"):
             if not user.groups.filter(pk=group).exists():
                 return []
 
-        target = context.get('target_model')
-        pk = context.get('target_id')
+        target = context.get("target_model")
+        pk = context.get("target_id")
 
         # Panel should not be visible for this target!
         if not self.is_panel_visible(target, pk):
@@ -158,16 +172,14 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
 
         return [
             {
-                'key': 'order-history',
-                'title': 'Order History',
-                'description': 'View order history for this part',
-                'icon': 'ti:history:outline',
-                'source': self.plugin_static_file(
-                    'OrderHistoryPanel.js:RenderPanel'
-                ),
-                'context': {
-                    'settings': self.plugin_settings,
-                }
+                "key": "order-history",
+                "title": "Order History",
+                "description": "View order history for this part",
+                "icon": "ti:history:outline",
+                "source": self.plugin_static_file("OrderHistoryPanel.js:RenderPanel"),
+                "context": {
+                    "settings": self.plugin_settings,
+                },
             }
         ]
 
@@ -183,50 +195,66 @@ class OrderHistoryPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTree
         self.plugin_settings = self.get_settings_dict()
 
         # Check that the user is part of the allowed group
-        if group := self.plugin_settings.get('USER_GROUP'):
+        if group := self.plugin_settings.get("USER_GROUP"):
             if not user.groups.filter(pk=group).exists():
                 return []
 
         items = []
 
-        # Only display the dashboard item if at least one type of order history is enabled
-        if not (self.plugin_settings.get('BUILD_ORDER_HISTORY') or self.plugin_settings.get('PURCHASE_ORDER_HISTORY') or self.plugin_settings.get('SALES_ORDER_HISTORY') or self.plugin_settings.get('RETURN_ORDER_HISTORY')):
-            return []
+        if self.plugin_settings.get("BUILD_ORDER_HISTORY") and check_user_role(
+            user, RuleSetEnum.BUILD, "view"
+        ):
+            items.append({
+                "key": "order-history-bo",
+                "title": _("Build Order History"),
+                "description": _(
+                    "View summary of completed build orders over the last 12 months"
+                ),
+                "source": self.plugin_static_file(
+                    "DashboardWidgets.js:BuildOrderSummaryWidget"
+                ),
+            })
 
-        items.append({
-            'key': 'order-history-bo',
-            'title': _('Build Order History'),
-            'description': _('View summary of completed build orders over the last 12 months'),
-            'source': self.plugin_static_file(
-                'DashboardWidgets.js:BuildOrderSummaryWidget'
-            ),
-        })
+        if self.plugin_settings.get("PURCHASE_ORDER_HISTORY") and check_user_role(
+            user, RuleSetEnum.PURCHASE_ORDER, "view"
+        ):
+            items.append({
+                "key": "order-history-po",
+                "title": _("Purchase Order History"),
+                "description": _(
+                    "View summary of completed purchase orders over the last 12 months"
+                ),
+                "source": self.plugin_static_file(
+                    "DashboardWidgets.js:PurchaseOrderSummaryWidget"
+                ),
+            })
 
-        items.append({
-            'key': 'order-history-po',
-            'title': _('Purchase Order History'),
-            'description': _('View summary of completed purchase orders over the last 12 months'),
-            'source': self.plugin_static_file(
-                'DashboardWidgets.js:PurchaseOrderSummaryWidget'
-            ),
-        })
+        if self.plugin_settings.get("SALES_ORDER_HISTORY") and check_user_role(
+            user, RuleSetEnum.SALES_ORDER, "view"
+        ):
+            items.append({
+                "key": "order-history-so",
+                "title": _("Sales Order History"),
+                "description": _(
+                    "View summary of completed sales orders over the last 12 months"
+                ),
+                "source": self.plugin_static_file(
+                    "DashboardWidgets.js:SalesOrderSummaryWidget"
+                ),
+            })
 
-        items.append({
-            'key': 'order-history-so',
-            'title': _('Sales Order History'),
-            'description': _('View summary of completed sales orders over the last 12 months'),
-            'source': self.plugin_static_file(
-                'DashboardWidgets.js:SalesOrderSummaryWidget'
-            ),
-        })
-
-        items.append({
-            'key': 'order-history-ro',
-            'title': _('Return Order History'),
-            'description': _('View summary of completed return orders over the last 12 months'),
-            'source': self.plugin_static_file(
-                'DashboardWidgets.js:ReturnOrderSummaryWidget'
-            ),
-        })
+        if self.plugin_settings.get("RETURN_ORDER_HISTORY") and check_user_role(
+            user, RuleSetEnum.RETURN_ORDER, "view"
+        ):
+            items.append({
+                "key": "order-history-ro",
+                "title": _("Return Order History"),
+                "description": _(
+                    "View summary of completed return orders over the last 12 months"
+                ),
+                "source": self.plugin_static_file(
+                    "DashboardWidgets.js:ReturnOrderSummaryWidget"
+                ),
+            })
 
         return items
