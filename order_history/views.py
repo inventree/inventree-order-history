@@ -29,9 +29,7 @@ class DashboardView(APIView):
     def get(self, request):
         """Fetch aggregated order data for dashboard widgets."""
 
-        serializer = serializers.DashboardRequestSerializer(
-            data=request.query_params
-        )
+        serializer = serializers.DashboardRequestSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
         data = cast(dict, serializer.validated_data)
@@ -48,13 +46,15 @@ class DashboardView(APIView):
 
         # No valid order type provided
         if model_type not in generators:
-            return Response({'history': []})
+            return Response({"history": []})
 
         orders = generators[model_type]()
 
-        return Response(serializers.DashboardResponseSerializer({'history': orders}).data)
+        return Response(
+            serializers.DashboardResponseSerializer({"history": orders}).data
+        )
 
-    def filter_by_period(self, queryset, date_field: str = 'complete_date'):
+    def filter_by_period(self, queryset, date_field: str = "complete_date"):
         """Filter a queryset by the selected date range."""
 
         end_date = current_date()
@@ -67,19 +67,18 @@ class DashboardView(APIView):
 
         return queryset.filter(**filter_kwargs).order_by(date_field)
 
-    def group_by_month(self, queryset, date_field: str = 'complete_date'):
+    def group_by_month(self, queryset, date_field: str = "complete_date"):
         """Group a queryset by month, based on the provided date field."""
 
         results = (
-            queryset
-            .annotate(month=TruncMonth(date_field))
-            .values('month')
-            .annotate(count=Count('pk'))
-            .order_by('month')
+            queryset.annotate(month=TruncMonth(date_field))
+            .values("month")
+            .annotate(count=Count("pk"))
+            .order_by("month")
         )
 
         return [
-            {'date': entry['month'].strftime('%Y-%m'), 'quantity': entry['count']}
+            {"date": entry["month"].strftime("%Y-%m"), "quantity": entry["count"]}
             for entry in results
         ]
 
@@ -93,9 +92,9 @@ class DashboardView(APIView):
             status__in=BuildStatusGroups.COMPLETE
         ).prefetch_related("part")
 
-        builds = self.filter_by_period(builds, date_field='completion_date')
+        builds = self.filter_by_period(builds, date_field="completion_date")
 
-        return self.group_by_month(builds, date_field='completion_date')
+        return self.group_by_month(builds, date_field="completion_date")
 
     def get_purchase_orders(self):
         """Fetch purchase order data for dashboard widget."""
@@ -121,9 +120,9 @@ class DashboardView(APIView):
             status__in=SalesOrderStatusGroups.COMPLETE,
         ).prefetch_related("customer")
 
-        orders = self.filter_by_period(orders, date_field='shipment_date')
+        orders = self.filter_by_period(orders, date_field="shipment_date")
 
-        return self.group_by_month(orders, date_field='shipment_date')
+        return self.group_by_month(orders, date_field="shipment_date")
 
     def get_return_orders(self):
         """Fetch return order data for dashboard widget."""
@@ -138,7 +137,6 @@ class DashboardView(APIView):
         orders = self.filter_by_period(orders)
 
         return self.group_by_month(orders)
-
 
 
 class HistoryView(APIView):
