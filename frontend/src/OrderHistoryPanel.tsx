@@ -360,8 +360,10 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
             value={startDate}
             label={`Start Date`}
             onChange={(value: DateValue) => {
-              if (value && value < endDate) {
-                setStartDate(new Date(value));
+              if (value) {
+                if (dayjs(value).isBefore(dayjs(endDate))) {
+                  setStartDate(new Date(value));
+                }
               }
             }}
           />
@@ -369,8 +371,10 @@ function OrderHistoryPanel({ context }: { context: InvenTreePluginContext }) {
             value={endDate}
             label={`End Date`}
             onChange={(value: DateValue) => {
-              if (value && value > startDate) {
-                setEndDate(new Date(value));
+              if (value) {
+                if (dayjs(value).isAfter(dayjs(startDate))) {
+                  setEndDate(new Date(value));
+                }
               }
             }}
           />
